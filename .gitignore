@@ -1,0 +1,9 @@
+.env
+node_modules/
+*.log
+logs/
+.DS_Store
+dist/
+# Ignorar la base de datos de memoria y sesiones
+src/data/*.json
+memory.json
