@@ -4,6 +4,13 @@ node_modules/
 logs/
 .DS_Store
 dist/
+
 # Ignorar la base de datos de memoria y sesiones
 src/data/*.json
 memory.json
+
+# 🛡️ Ignorar sesión y caché de WhatsApp (Evita errores de permisos y protege la sesión)
+workspace/auth_wa/
+
+# 📦 Ignorar el frontend para mantener el repositorio del backend liviano
+frontend/
