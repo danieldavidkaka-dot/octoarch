@@ -1,16 +1,34 @@
 import { Client, LocalAuth, Message } from 'whatsapp-web.js';
 import qrcode from 'qrcode-terminal';
 import { Logger } from '../utils/logger';
-
-// 🛡️ SEGURIDAD: Lista blanca de números autorizados (Déjala vacía para probar)
-const WHITELIST: string[] = [];
+import { IntelligenceCore } from '../core/llm'; // 🧠 Importamos el Cerebro
 
 export class WhatsAppService {
     private static client: Client;
     private static isReady: boolean = false;
+    private static brain: IntelligenceCore; // 🧠 Instancia del cerebro
+
+    // 🗺️ DICCIONARIO DE ROLES (Aliases para WhatsApp)
+    private static roleMap: Record<string, string> = {
+        'chat': 'CHAT',
+        'seguro': 'CHAT',
+        'dev': 'DEV',
+        'root': 'DEV',
+        'research': 'RESEARCHER',
+        'web': 'RESEARCHER',
+        'cfo': 'CFO_ADVISOR',
+        'finanzas': 'CFO_ADVISOR',
+        'cmo': 'MARKETING_GURU',
+        'legal': 'LEGAL_DRAFT',
+        'copy': 'COPYWRITER',
+        'seo': 'SEO_AUDIT'
+    };
 
     static async initialize() {
-        Logger.info("📱 Iniciando servicio de WhatsApp (Modo Robusto)...");
+        Logger.info("📱 Iniciando servicio de WhatsApp (Modo Robusto con Roles)...");
+
+        // Inicializamos el cerebro para WhatsApp
+        this.brain = new IntelligenceCore();
 
         this.client = new Client({
             restartOnAuthFail: true, 
@@ -18,14 +36,12 @@ export class WhatsAppService {
                 clientId: "octoarch_v4_session", 
                 dataPath: 'workspace/auth_wa'
             }),
-            // 🛠️ FIX 1: Forzar una versión estable de WhatsApp Web
             webVersionCache: {
                 type: 'remote',
                 remotePath: 'https://raw.githubusercontent.com/wppconnect-team/wa-version/main/html/2.2412.54.html',
             },
             puppeteer: {
                 headless: true,
-                // 🛠️ FIX 2: Aumentar el timeout para que no desespere
                 timeout: 60000, 
                 args: [
                     '--no-sandbox',
@@ -40,8 +56,6 @@ export class WhatsAppService {
 
         // 1. GENERACIÓN DE QR
         this.client.on('qr', (qr: string) => {
-            // 🛠️ FIX 3: Desactivar console.clear() temporalmente para no perder el QR visualmente
-            // console.clear(); 
             Logger.info("📱 ¡NUEVO QR! Escanea este RÁPIDO con tu celular:");
             qrcode.generate(qr, { small: true });
         });
@@ -56,21 +70,64 @@ export class WhatsAppService {
         });
 
         this.client.on('ready', () => {
-            Logger.info("✅ ¡CONECTADO! Octoarch v4.0 ya tiene WhatsApp.");
+            Logger.info("✅ ¡CONECTADO! Octoarch v4.0 ya tiene WhatsApp y está pensando.");
             this.isReady = true;
         });
 
         // 3. ESCUCHA DE MENSAJES
         this.client.on('message_create', async (msg: Message) => {
-            if (WHITELIST.length > 0 && !WHITELIST.includes(msg.from)) {
+            // Ignorar estados o mensajes vacíos
+            if (msg.isStatus || msg.type !== 'chat' || !msg.body) return;
+
+            // 🔒 BLOQUEO DE SEGURIDAD (OWNER ONLY)
+            // Si el mensaje NO fue escrito por ti (desde tu cuenta), se ignora de inmediato.
+            if (!msg.fromMe) {
                 return;
             }
 
-            Logger.info(`🔎 [Chat] ${msg.from} dice: "${msg.body}"`);
-
+            // Si es un comando simple de prueba, responde rápido y sale
             if (msg.body === '!ping') {
-                Logger.info("🏓 ¡Ping detectado! Enviando respuesta...");
                 await msg.reply('🐙 Octoarch v4.0 Online & Ready.');
+                return;
+            }
+
+            // 🧠 CONEXIÓN AL CEREBRO DE GEMINI Y ENRUTADOR DE ROLES
+            if (msg.body.toLowerCase().startsWith('octo ')) {
+                try {
+                    // Quitamos la palabra "octo " del inicio
+                    const rawQuery = msg.body.substring(5).trim();
+                    
+                    // Extraemos la primera palabra para ver si es un comando de ROL
+                    const firstWord = rawQuery.split(' ')[0].toLowerCase();
+                    
+                    let forcedIntent: string | null = null;
+                    let finalQuery = rawQuery;
+
+                    // Verificamos si la primera palabra coincide con nuestro diccionario de roles
+                    if (this.roleMap[firstWord]) {
+                        forcedIntent = this.roleMap[firstWord];
+                        // Le quitamos el comando de rol a la oración para no confundir a la IA
+                        finalQuery = rawQuery.substring(firstWord.length).trim();
+                        Logger.info(`🔎 [WhatsApp] Modo detectado: ${forcedIntent}`);
+                    } else {
+                        Logger.info(`🔎 [WhatsApp] Modo detectado: AUTO (Sin restricciones)`);
+                    }
+
+                    // Reaccionamos para indicar que empezamos a procesar
+                    await msg.react('🧠');
+
+                    // 🚀 Enviamos la orden al LLM junto con el rol forzado (si existe)
+                    const aiResponse = await this.brain.generateResponse(finalQuery, forcedIntent);
+
+                    // Reaccionamos con un check y enviamos la respuesta
+                    await msg.react('✅');
+                    await msg.reply(aiResponse);
+
+                } catch (error) {
+                    Logger.error("❌ Error en WhatsApp AI:", error);
+                    await msg.react('❌');
+                    await msg.reply("⚠️ Tuve un fallo crítico procesando la instrucción.");
+                }
             }
         });
 
@@ -89,9 +146,9 @@ export class WhatsAppService {
         }
         try {
             await this.client.sendMessage(to, message);
-            Logger.info(`📤 Mensaje enviado a ${to}`);
+            Logger.info(`📤 Mensaje automático enviado a ${to}`);
         } catch (error) {
-            Logger.error("❌ Error enviando mensaje", error);
+            Logger.error("❌ Error enviando mensaje automático", error);
         }
     }
 }

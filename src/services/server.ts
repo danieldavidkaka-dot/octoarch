@@ -3,62 +3,62 @@ import { Logger } from '../utils/logger';
 import { IntelligenceCore } from '../core/llm';
 
 export class OctoServer {
-  private wss: WebSocketServer | null = null;
-  private port: number;
-  private brain: IntelligenceCore;
+    private wss: WebSocketServer | null = null;
+    private port: number;
+    private brain: IntelligenceCore;
 
-  constructor(port: number) {
-    this.port = port;
-    // 👇 ESTO ES LO QUE FALTABA: Inicializar el cerebro
-    this.brain = new IntelligenceCore(); 
-  }
+    constructor(port: number) {
+        this.port = port;
+        this.brain = new IntelligenceCore();
+    }
 
-  start() {
-    this.wss = new WebSocketServer({ port: this.port });
+    start() {
+        this.wss = new WebSocketServer({ port: this.port });
 
-    this.wss.on('listening', () => {
-      Logger.info(`🐙 Octoarch Server v3.0 escuchando en el puerto ${this.port}`);
-    });
+        this.wss.on('listening', () => {
+            Logger.info(`Octoarch Server v3.0 escuchando en el puerto ${this.port}`);
+        });
 
-    this.wss.on('connection', (ws: WebSocket) => {
-      Logger.info('🔌 Cliente conectado');
+        this.wss.on('connection', (ws: WebSocket) => {
+            Logger.info('Cliente conectado desde la web');
 
-      ws.on('message', async (message: string) => {
-        try {
-          const raw = message.toString();
-          const parsed = JSON.parse(raw);
-          
-          // Extraer el texto del usuario según el formato
-          let userText = "";
-          if (parsed.type === "agent:turn" && parsed.data) {
-              userText = parsed.data.message;
-          } else if (parsed.message) {
-              userText = parsed.message;
-          } else {
-              userText = raw;
-          }
+            ws.on('message', async (message: string) => {
+                try {
+                    const raw = message.toString();
+                    const parsed = JSON.parse(raw);
+                    
+                    let userText = "";
+                    let forcedIntent: string | null = null; // ⚙️ NUEVO: Captura la intención forzada
 
-          Logger.info(`📩 Procesando solicitud: "${userText.substring(0, 50)}..."`);
+                    if (parsed.type === "agent:turn" && parsed.data) {
+                        userText = parsed.data.message;
+                        forcedIntent = parsed.data.forcedIntent || null;
+                    } else if (parsed.message) {
+                        userText = parsed.message;
+                    } else {
+                        userText = raw;
+                    }
 
-          // 👇 AQUÍ LA MAGIA: El cerebro genera la respuesta
-          const aiResponse = await this.brain.generateResponse(userText);
+                    Logger.info(`Procesando solicitud: "${userText.substring(0, 50)}..." [Modo: ${forcedIntent || 'Auto'}]`);
 
-          // Enviamos respuesta al cliente
-          ws.send(JSON.stringify({ 
-            type: 'response', 
-            content: aiResponse,
-            done: true 
-          }));
+                    // 🚀 Pasamos el forcedIntent al cerebro
+                    const aiResponse = await this.brain.generateResponse(userText, forcedIntent);
 
-        } catch (error: any) {
-          Logger.error('❌ Error procesando mensaje:', error);
-          ws.send(JSON.stringify({ type: 'error', content: error.message }));
-        }
-      });
-    });
-  }
+                    ws.send(JSON.stringify({
+                        type: 'response',
+                        content: aiResponse,
+                        done: true
+                    }));
 
-  stop() {
-    if (this.wss) this.wss.close();
-  }
+                } catch (error: any) {
+                    Logger.error('❌ Error procesando mensaje:', error);
+                    ws.send(JSON.stringify({ type: 'error', content: error.message }));
+                }
+            });
+        });
+    }
+
+    stop() {
+        if (this.wss) this.wss.close();
+    }
 }
