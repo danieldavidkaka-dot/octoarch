@@ -1,14 +1,14 @@
-# 🐙 OctoArch v4.2 - Autonomous Orchestration Engine
+# 🐙 OctoArch v4.2 - The Cognitive Runtime
 
 [![AI for Good](https://img.shields.io/badge/AI-Make_the_world_a_better_place-success)](#) [![Free Venezuela](https://img.shields.io/badge/Free-Venezuela_🇻🇪_|_Free_the_world_❤️-ff0000)](#)
 
-![Captura de OctoArch en funcionamiento](assets/wmremove-transformed.jpeg)
+![Captura de OctoArch en funcionamiento](assets/wmremove-transformed.png)
 
-**OctoArch** es un motor de orquestación autónoma local... impulsado por **Google Gemini 2.5 Flash**. Diseñado para operar como un "Sistema Operativo Cognitivo", permite la administración de servidores, automatización de tareas y navegación web compleja a través de interfaces de lenguaje natural (Web Terminal y WhatsApp).
+**OctoArch** es un entorno de ejecución cognitivo (*Cognitive Runtime*) impulsado por **Google Gemini 2.5 Flash**. Diseñado para operar como infraestructura base local, permite la administración de servidores, automatización de tareas y navegación web mediante orquestación determinista a través de interfaces de lenguaje natural (Web Terminal y WhatsApp).
 
 ## 🚀 Estado Actual (v4.2 - Enterprise Stable)
 
-El sistema ha evolucionado de un prototipo de chatbot a un **Agente Autónomo de Nivel Producción** con capacidad de ejecución real, memoria persistente a corto plazo y ruteo determinista.
+El sistema ha evolucionado de un prototipo a un **Agente Autónomo de Nivel Producción** con capacidad de ejecución real, memoria persistente a corto plazo y ruteo determinista.
 
 ### 🧠 Arquitectura Cognitiva Core
 * **Intelligence Core (Singleton):** Motor centralizado que gestiona el estado global del sistema, evitando fugas de memoria y manteniendo un contexto coherente.
