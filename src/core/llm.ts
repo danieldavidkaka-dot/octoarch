@@ -1,70 +1,50 @@
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { env } from '../config/env';
-import { FileTool } from '../tools/files';
-import { ShellTool } from '../tools/shell';
 import { MemorySystem } from './memory';
 import { ConversationManager } from './conversation';
 import { Logger } from '../utils/logger';
-import { detectIntent, applyTemplate, buildSystemPrompt } from './library';
+import { detectIntent, applyTemplate } from './library';
+import { octoTools } from './agent_tools';
+import { AgentExecutor } from './agent_executor';
 
 export class IntelligenceCore {
     private model: any;
     // @ts-ignore
     private conversationMgr: ConversationManager;
 
-    constructor() {
+    private constructor() {
         this.conversationMgr = new ConversationManager();
         const genAI = new GoogleGenerativeAI(env.GEMINI_API_KEY);
-        // Usamos gemini-2.5-flash porque es excelente y rápido para OCR Multimodal
         const modelName = "gemini-2.5-flash";
         
         this.model = genAI.getGenerativeModel({ 
             model: modelName,
+            tools: octoTools,
             systemInstruction: `
-            ERES OCTOARCH V4.0.
+            ERES OCTOARCH V4.2.
             
-            1. REGLA DE IDIOMA (BILINGÜE):
-            Analiza el idioma del usuario. Responde y PIENSA ('thought') estrictamente en ese idioma.
-
-            2. REGLA DE HERRAMIENTAS (CRÍTICA):
-            - Para NAVEGAR en internet: DEBES usar { "action": "inspect", "url": "..." }.
-            - ESTÁ PROHIBIDO usar "execute" para ver webs. "execute" es SOLO para comandos de terminal (bash/powershell).
-            - Si estás en modo RESEARCHER, solo puedes usar "inspect" y "read". NO intentes usar "execute".
-
-            3. REGLA ANTI-ALUCINACIÓN:
-            No inventes noticias ni datos. Si no puedes usar la herramienta, dilo. Si una imagen no es legible, dilo.
+            1. REGLA DE IDIOMA: Responde y PIENSA ('thought') en el idioma del usuario.
+            2. REGLA DE NAVEGACIÓN: Usa 'inspectWeb'. PROHIBIDO usar 'executeCommand' para ver webs.
+            3. ANTI-ALUCINACIÓN: No inventes datos. Si una herramienta falla, infórmalo.
             `
         });
-        
-        Logger.info(`IntelligenceCore v4.1 (Multimodal Vision Ready) inicializado con ${modelName}`);
+        Logger.info(`🧠 IntelligenceCore inicializado (Modular & Stateful Nativo)`);
     }
 
-    // Función auxiliar para formatear la imagen para Google Gemini
     private parseBase64Image(dataURI: string) {
-        // Separa "data:image/jpeg;base64" del contenido real
         const split = dataURI.split(',');
         if (split.length !== 2) return null;
-        
-        const mimeString = split[0].split(':')[1].split(';')[0];
-        const base64Data = split[1];
-        
-        return {
-            inlineData: {
-                data: base64Data,
-                mimeType: mimeString
-            }
-        };
+        return { inlineData: { data: split[1], mimeType: split[0].split(':')[1].split(';')[0] } };
     }
 
-    private async generateWithRetry(content: string | any[], retries = 3): Promise<any> {
+    private async generateWithRetry(request: any, retries = 3): Promise<any> {
         let delay = 5000;
         for (let i = 0; i < retries; i++) {
             try {
-                // Ahora puede recibir un string o un Array (Texto + Imagen)
-                return await this.model.generateContent(content);
+                return await this.model.generateContent(request);
             } catch (error: any) {
                 if (error.message?.includes('429') || error.message?.includes('Quota')) {
-                    Logger.warn(`Rate Limit. Esperando ${delay}ms... (Intento ${i + 1}/${retries})`);
+                    Logger.warn(`Rate Limit. Esperando ${delay}ms...`);
                     await new Promise(resolve => setTimeout(resolve, delay));
                     delay *= 2;
                 } else {
@@ -75,137 +55,110 @@ export class IntelligenceCore {
         throw new Error("❌ Se excedió el límite de reintentos.");
     }
 
-    // 🚀 AHORA ACEPTA LA IMAGEN COMO TERCER PARÁMETRO
     async generateResponse(userPrompt: string, forcedIntent: string | null = null, imageBase64: string | null = null): Promise<string> {
         try {
-            const fileList = await FileTool.listFiles('./');
             const memory = await MemorySystem.recall();
-            
             const intent = forcedIntent ? forcedIntent : detectIntent(userPrompt);
             const enrichedPrompt = applyTemplate(intent, userPrompt);
-            Logger.info('Intención Final Evaluada', { intent, isForced: !!forcedIntent, hasImage: !!imageBase64 });
+            const isInvoDex = intent.includes('INVODEX');
+            
+            const contents: any[] = []; // Arreglo nativo de historial Gemini
 
-            const systemPrompt = buildSystemPrompt(memory, fileList, enrichedPrompt);
-
-            // 👁️ Lógica Multimodal (Visión)
-            let promptContent: any = systemPrompt;
-            if (imageBase64) {
-                const imagePart = this.parseBase64Image(imageBase64);
-                if (imagePart) {
-                    Logger.info('🖼️ Inyectando imagen al prompt de Gemini...');
-                    // Gemini requiere que le pasemos un Array cuando hay imágenes
-                    promptContent = [systemPrompt, imagePart]; 
-                } else {
-                    Logger.warn('⚠️ Imagen recibida pero el formato Base64 es inválido.');
+            if (!isInvoDex) {
+                this.conversationMgr.add('user', userPrompt);
+                const history = this.conversationMgr.getHistory();
+                
+                let lastRole = "";
+                // 🔄 Traducción de Memoria a Formato Nativo de Gemini
+                for (const msg of history) {
+                    if (!msg.content) continue;
+                    const role = msg.role === 'model' ? 'model' : 'user';
+                    
+                    // Gemini colapsa si hay dos "user" seguidos, así que los concatenamos
+                    if (role === lastRole) {
+                        contents[contents.length - 1].parts[0].text += `\n\n[NUEVO MENSAJE]: ${msg.content}`;
+                    } else {
+                        contents.push({ role, parts: [{ text: msg.content }] });
+                        lastRole = role;
+                    }
                 }
+                Logger.info(`Intención: ${intent} | Modo: Stateful Nativo`);
+            } else {
+                Logger.info(`Intención: ${intent} | Modo: Stateless`);
             }
 
-            const result = await this.generateWithRetry(promptContent);
-            const responseText = result.response.text();
+            // 📦 Empaquetado del turno actual
+            const currentTurnText = `[ENTORNO]\nMemoria Global: ${memory}\n\n[INSTRUCCIÓN]\nActúas como: ${intent}\n${enrichedPrompt}`;
+            const currentParts: any[] = [{ text: currentTurnText }];
             
-            return await this.processExecution(responseText, intent, forcedIntent);
+            if (imageBase64) {
+                const img = this.parseBase64Image(imageBase64);
+                if (img) currentParts.push(img);
+            }
+
+            // Si el último mensaje inyectado ya era del usuario, le adjuntamos este nuevo texto
+            if (contents.length > 0 && contents[contents.length - 1].role === 'user') {
+                contents[contents.length - 1].parts.push(...currentParts);
+            } else {
+                contents.push({ role: 'user', parts: currentParts });
+            }
+
+            const result = await this.generateWithRetry({ contents });
+            const finalProcessedResponse = await this.processExecution(result, intent, forcedIntent);
+
+            if (!isInvoDex) {
+                this.conversationMgr.add('model', finalProcessedResponse);
+            }
+
+            return finalProcessedResponse;
 
         } catch (error: any) {
             Logger.error("❌ Error en Core:", error);
-            return `❌ Error: ${error.message}. Verifica tu API Key o cuota.`;
+            return `❌ Error: ${error.message}`;
         }
     }
 
-    private async processExecution(responseText: string, intent: string, forcedIntent: string | null): Promise<string> {
+    private async processExecution(result: any, intent: string, forcedIntent: string | null): Promise<string> {
         try {
-            const firstBrace = responseText.indexOf('{');
-            const lastBrace = responseText.lastIndexOf('}');
-
-            if (firstBrace === -1 || lastBrace === -1) return responseText;
-
-            const cleanJson = responseText.substring(firstBrace, lastBrace + 1);
-
-            let parsed: any;
-            try {
-                parsed = JSON.parse(cleanJson);
-            } catch (jsonError) {
-                return responseText;
+            const functionCalls = result.response.functionCalls();
+            if (!functionCalls || functionCalls.length === 0) {
+                return result.response.text();
             }
-            
-            if (!parsed.operations || !Array.isArray(parsed.operations)) return parsed.thought || responseText;
 
-            let toolOutputs = ""; 
+            let toolOutputs = "";
             let operationsPerformed = false;
             const activeRole = forcedIntent || 'Auto';
 
-            for (const op of parsed.operations) {
-                let isAllowed = true;
-                let denyReason = "";
-
-                if (activeRole === 'CHAT') {
-                    if (['execute', 'create', 'read', 'inspect'].includes(op.action)) {
-                        isAllowed = false;
-                        denyReason = "Modo Seguro (Chat) no permite herramientas.";
-                    }
-                } 
-                else if ((activeRole === 'CFO_ADVISOR' || activeRole === 'RESEARCHER') && ['execute', 'create'].includes(op.action)) {
-                    isAllowed = false;
-                    denyReason = "Rol de Análisis no permite modificar el sistema (Read-Only).";
-                }
-
-                if (!isAllowed) {
-                    Logger.warn(`🛡️ BLOCKED: ${op.action} en modo ${activeRole}`);
-                    toolOutputs += `❌ [BLOCKED]: Operación '${op.action}' denegada por seguridad (${denyReason}).\n`;
-                    continue; 
-                }
-
-                try {
-                    if (op.action === 'read' && op.path) {
-                        const content = await FileTool.readFile(op.path);
-                        toolOutputs += `\n--- RESULTADO DE LEER ${op.path} ---\n${content.substring(0, 5000)}\n-----------------------------------\n`;
-                        operationsPerformed = true;
-                    }
-                    else if (op.action === 'create' && op.path && op.content) {
-                        const res = await FileTool.writeFile(op.path, op.content);
-                        toolOutputs += `\n--- RESULTADO DE CREAR ARCHIVO ---\n${res}\n-----------------------------------\n`;
-                        operationsPerformed = true;
-                    }
-                    else if (op.action === 'execute' && op.command) {
-                        const output = await ShellTool.execute(op.command);
-                        toolOutputs += `\n--- RESULTADO DE TERMINAL (${op.command}) ---\n${output.substring(0, 3000)}\n-----------------------------------\n`;
-                        operationsPerformed = true;
-                    }
-                    else if (op.action === 'inspect' && op.url) {
-                        const { BrowserTool } = require('../tools/browser');
-                        const report = await BrowserTool.inspect(op.url);
-                        toolOutputs += `\n--- RESULTADO DE NAVEGADOR (${op.url}) ---\n${report}\n-----------------------------------\n`;
-                        operationsPerformed = true;
-                    }
-                } catch (opError: any) {
-                    toolOutputs += `❌ [ERROR EJECUCIÓN]: ${opError.message}\n`;
+            for (const call of functionCalls) {
+                // ⚡ Delegamos la ejecución y seguridad al nuevo AgentExecutor
+                const executionResult = await AgentExecutor.execute(call.name, call.args, activeRole);
+                toolOutputs += executionResult;
+                if (!executionResult.includes('[BLOCKED]') && !executionResult.includes('[ERROR EJECUCIÓN')) {
+                    operationsPerformed = true;
                 }
             }
 
             if (operationsPerformed) {
-                Logger.info("🔄 Iniciando Bucle Cognitivo para interpretar resultados...");
-                const loopPrompt = `
-                [CONTEXTO]
-                Actúas como: ${intent}.
-                Tu pensamiento original fue: "${parsed.thought || 'N/A'}"
-                
-                [RESULTADOS TÉCNICOS OBTENIDOS]
-                ${toolOutputs}
-
-                [INSTRUCCIÓN]
-                Analiza los resultados de arriba y responde al usuario final.
-                - NO menciones que estás leyendo logs o JSON.
-                - Si es una investigación web, resume los hallazgos clave de forma clara.
-                - Responde en el mismo idioma que usaste en tu pensamiento original.
-                `;
-
-                const finalResponse = await this.generateWithRetry(loopPrompt);
+                Logger.info("🔄 Bucle Cognitivo iniciado...");
+                const loopPrompt = `[RESULTADOS TÉCNICOS]\n${toolOutputs}\n\n[INSTRUCCIÓN]\nAnaliza los resultados técnicos de las herramientas que acabas de usar y formula la respuesta final para el usuario. No menciones el JSON.`;
+                const finalResponse = await this.generateWithRetry({ contents: [{ role: 'user', parts: [{ text: loopPrompt }] }] });
                 return finalResponse.response.text();
             }
 
-            return `**Octoarch (${intent}):**\n${parsed.thought || ''}\n\n${toolOutputs}`;
+            return `**Octoarch (${intent}):**\nIntenté ejecutar herramientas pero fallaron.\n\n${toolOutputs}`;
 
-        } catch (e) {
-            return responseText;
+        } catch (error: any) {
+            Logger.error("❌ Error en processExecution:", error);
+            try { return result.response.text(); } catch { return "❌ Error procesando las herramientas."; }
         }
     }
+}
+
+let instance: IntelligenceCore | null = null;
+export function getBrain(): IntelligenceCore {
+    if (!instance) {
+        // @ts-ignore
+        instance = new IntelligenceCore();
+    }
+    return instance!;
 }

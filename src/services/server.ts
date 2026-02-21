@@ -3,7 +3,7 @@ import express from 'express';
 import http from 'http';
 import cors from 'cors';
 import { Logger } from '../utils/logger';
-import { IntelligenceCore } from '../core/llm';
+import { IntelligenceCore, getBrain } from '../core/llm';
 
 export class OctoServer {
     private wss: WebSocketServer | null = null;
@@ -14,7 +14,7 @@ export class OctoServer {
 
     constructor(port: number) {
         this.port = port;
-        this.brain = new IntelligenceCore();
+        this.brain = getBrain();
         this.app = express();
 
         // 🛡️ CONFIGURACIÓN HTTP PARA LA EXTENSIÓN Y VISIÓN (INVODEX)

@@ -1,7 +1,7 @@
 import { Client, LocalAuth, Message } from 'whatsapp-web.js';
 import qrcode from 'qrcode-terminal';
 import { Logger } from '../utils/logger';
-import { IntelligenceCore } from '../core/llm'; // 🧠 Importamos el Cerebro
+import { IntelligenceCore, getBrain } from '../core/llm'; // 🧠 Importamos el Cerebro global
 
 export class WhatsAppService {
     private static client: Client;
@@ -28,7 +28,7 @@ export class WhatsAppService {
         Logger.info("📱 Iniciando servicio de WhatsApp (Modo Robusto con Roles)...");
 
         // Inicializamos el cerebro para WhatsApp
-        this.brain = new IntelligenceCore();
+        this.brain = getBrain();
 
         this.client = new Client({
             restartOnAuthFail: true, 
