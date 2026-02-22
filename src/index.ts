@@ -1,7 +1,7 @@
 /**
- * Octoarch v4.0
+ * Octoarch v4.2 - The Cognitive Runtime
  * Copyright (c) 2026 Daniel David Barrios
- * Licensed under GNU General Public License v3.0
+ * License: MIT (Open Core)
  */
 
 import { OctoServer } from './services/server';
@@ -9,7 +9,8 @@ import { Logger } from './utils/logger';
 import { env } from './config/env';
 import { MemorySystem } from './core/memory';
 import { runDiagnosis } from './utils/diagnose'; 
-import { WhatsAppService } from './tools/whatsapp'; // ✅ Nuevo servicio
+import { WhatsAppService } from './tools/whatsapp';
+import { MCPManager } from './core/mcp_manager'; // 🔌 Importamos el gestor MCP
 import express from 'express';
 import path from 'path';
 import fs from 'fs';
@@ -18,7 +19,7 @@ async function main() {
   await runDiagnosis();
 
   // 1. DEFINIR LA RUTA DEL FRONTEND CON PRECISIÓN QUIRÚRGICA
-  // Usamos process.cwd() para asegurarnos que parte desde C:\Octoarch4.0
+  // Usamos process.cwd() para asegurarnos que parte desde la raíz del proyecto
   const frontendPath = path.join(process.cwd(), 'frontend');
 
   console.log('\n🔍 === DIAGNÓSTICO DE FRONTEND ===');
@@ -33,6 +34,13 @@ async function main() {
   console.log('==================================\n');
 
   try {
+    // 0. Inicializar Conexiones Externas (MCP) ANTES del cerebro
+    await MCPManager.getInstance().connectServer(
+        "servidor-invodex",
+        "npx", 
+        ["ts-node", path.join(__dirname, "mcp_invodex_mock.ts")]
+    );
+
     // 1. Inicializar Memoria
     await MemorySystem.initialize();
     
