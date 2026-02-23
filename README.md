@@ -2,72 +2,89 @@
 
 [![AI for Good](https://img.shields.io/badge/AI-Make_the_world_a_better_place-success)](#) [![Free Venezuela](https://img.shields.io/badge/Free-Venezuela_🇻🇪_|_Free_the_world_❤️-ff0000)](#)
 
-![Captura de OctoArch en funcionamiento](assets/wmremove-transformed.png)
+![OctoArch](assets/wmremove-transformed.png)
 
-**OctoArch** es un entorno de ejecución cognitivo (*Cognitive Runtime*) impulsado por **Google Gemini 2.5 Flash**. Diseñado para operar como infraestructura base local, permite la administración de servidores, automatización de tareas y navegación web mediante orquestación determinista a través de interfaces de lenguaje natural (Web Terminal y WhatsApp).
+**OctoArch** is not just another chatbot. It is an open-source **Cognitive Runtime Environment** powered by Gemini 2.5 Flash. It is designed to orchestrate local workflows, perform deep web research, and connect to any external ecosystem using Anthropic's **MCP (Model Context Protocol)**.
 
-## 🚀 Estado Actual (v4.2 - Enterprise Stable)
-
-El sistema ha evolucionado de un prototipo a un **Agente Autónomo de Nivel Producción** con capacidad de ejecución real, memoria persistente a corto plazo y ruteo determinista.
-
-### 🧠 Arquitectura Cognitiva Core
-* **Intelligence Core (Singleton):** Motor centralizado que gestiona el estado global del sistema, evitando fugas de memoria y manteniendo un contexto coherente.
-* **Enrutamiento Determinista (Nativo):** Utiliza *Function Calling* nativo de la API de Gemini. El agente ya no adivina formatos JSON, sino que ejecuta herramientas a través de esquemas tipados estrictos (`SchemaType`), reduciendo a cero las alucinaciones de formato.
-* **Memoria Stateful Nativa:** Mantiene un historial de conversación fluido y eficiente inyectado directamente en el objeto `Content[]` de la API, permitiendo al agente recordar contextos y ejecutar tareas de múltiples turnos.
-* **Bucle Cognitivo (Cognitive Loop):** El sistema no solo ejecuta herramientas, sino que *lee* sus propios resultados técnicos (logs de terminal, texto de webs, errores) y formula una respuesta final humana basada en esa evidencia.
-* **Protocolo Anti-Alucinación:** Reglas estrictas en el Kernel que prohíben inventar datos. Si no puede usar una herramienta, reporta el error real al usuario en lugar de simularlo.
-
-### 🛡️ Seguridad y Roles (RBAC)
-El sistema implementa un Firewall lógico basado en roles para proteger el host local, procesado en un módulo dedicado (`AgentExecutor`):
-
-| Rol | Alias (WhatsApp) | Permisos | Descripción |
-| :--- | :--- | :--- | :--- |
-| **AUTO / DEV** | `dev`, `root` | ✅ Todo | Acceso total: Shell, Filesystem (Write), Browser. |
-| **RESEARCHER** | `research` | 👁️ Solo Lectura | Navegación Web y Lectura de Archivos. **Bloquea** escritura y terminal. |
-| **CHAT** | `chat`, `seguro` | ❌ Ninguno | Modo seguro. Solo conversación. Herramientas desactivadas. |
-
-### 🛠️ Herramientas Integradas (Toolchain)
-1.  **BrowserTool (`inspectWeb`):** Navegador *headless* avanzado impulsado por un **Browser Pool**. Mantiene una instancia maestra de Puppeteer en memoria RAM y recicla pestañas (`newPage`), permitiendo inspeccionar múltiples URLs en segundos. Incluye *Stealth Mode* para evadir anti-bots.
-2.  **ShellTool (`executeCommand`):** Ejecución tipada de comandos de terminal (npm, git, python, etc.) con límites de tiempo (timeout) y extracción de *stdout/stderr*.
-3.  **FileTool (`readFile`/`createFile`):** Gestión del sistema de archivos con prevención estricta de ataques de *Path Traversal*.
+Its native interface isn't a standard web dashboard; it lives directly in your terminal and via **WhatsApp**, giving you a complete systems orchestrator in the palm of your hand.
 
 ---
 
-## 📱 Interfaz Remota (WhatsApp)
+## ✨ Core Features
 
-OctoArch incluye un servidor de WhatsApp (`whatsapp-web.js`) que actúa como canal de comando remoto seguro, integrado directamente con la inteligencia del agente.
-
-### Sintaxis de Comandos
-El sistema utiliza un **Enrutador de Intenciones** basado en la primera palabra del mensaje:
-
-`octo [ROL] [INSTRUCCIÓN]`
-
-#### Ejemplos de uso:
-
-* **Investigación Web de Alto Rendimiento:**
-    > `octo research investiga las páginas de example.com y de wikipedia.org. Dime de qué trata cada una.`
-    *(Nota: El sistema rechazará intentos de usar la terminal en este modo).*
-
-* **Desarrollo / DevOps (Root):**
-    > `octo dev verifica qué versión de node tenemos y crea un archivo test_nativo.txt en el workspace.`
-
-* **Chat Casual (Con Memoria Activa):**
-    > `octo chat ¿recuerdas cómo se llamaba el archivo que acabamos de crear?`
-
-* **Modo Auto (Cuidado):**
-    > `octo revisa el servidor.`
-    *(Si no se especifica rol, asume permisos totales).*
+* 🧠 **Self-Correcting Cognitive Loop:** If a terminal command fails or a web extraction throws an error, OctoArch reads the `stderr` logs, enters *Fix Mode*, and autonomously retries the operation.
+* 🔌 **Universal MCP Support:** Built on an *Open Core* architecture. Hot-plug Python, Go, Node.js scripts, or databases to the cognitive engine. OctoArch reads your MCP server tools and decides when to use them.
+* 📱 **Headless WhatsApp Interface:** Includes a built-in `whatsapp-web.js` server. Send terminal commands, receive generated PDFs, or request deep web research directly to your phone.
+* 🛡️ **Secure Local Execution:** Strict Role-Based Access Control (RBAC) and Path Traversal prevention. The agent operates strictly within an isolated `/workspace` directory.
 
 ---
 
-## 💻 Instalación y Despliegue
+## 📦 Tech Stack & Core Dependencies
 
-### Requisitos
-* Node.js v18+
-* Google Gemini API Key
-* Cuenta de WhatsApp (para vincular)
+OctoArch is built to be fast, modular, and reliable:
+* **`@google/generative-ai`**: Core cognitive engine (Gemini 2.5 Flash with native Function Calling).
+* **`@modelcontextprotocol/sdk`**: Standardized communication protocol for external tools.
+* **`whatsapp-web.js`**: Headless mobile communication bridge.
+* **`puppeteer`**: Web extraction and anti-bot evasion for deep research.
+* **`express` & `ws`**: Hybrid HTTP/WebSocket server for frontend integrations.
 
-### Iniciar el Cerebro (Backend + WhatsApp)
-```bash
+---
+
+## 🚀 Quick Start
+
+### Prerequisites
+* Node.js (v18 or higher)
+* A free API Key from [Google AI Studio](https://aistudio.google.com/)
+
+### Installation
+
+1. Clone this repository:
+   ```bash
+   git clone [https://github.com/danieldavidkaka-dot/octoarch.git](https://github.com/danieldavidkaka-dot/octoarch.git)
+   cd octoarch
+Install dependencies:
+
+Bash
 npm install
+Setup your environment:
+Rename the .env.example file to .env and inject your Gemini API Key:
+
+Fragmento de código
+PORT=18789
+NODE_ENV=development
+GEMINI_API_KEY=your_api_key_here
+Ignite the engine!
+
+Bash
 npm run dev
+On first boot, a QR code will appear in your terminal. Scan it with WhatsApp to link the agent.
+
+🛠️ Routing Architecture (Roles)
+OctoArch uses a dynamic intent detection system. Send commands from your CLI or WhatsApp using the following structure:
+
+octo [ROLE] [INSTRUCTION]
+
+Usage Examples:
+Development / DevOps (Root):
+
+octo dev check our node version and create a test.txt file in the workspace.
+
+Deep Web Research:
+
+octo research investigate example.com pages. Tell me what it's about and summarize.
+
+Casual Chat (With Active Memory):
+
+octo chat do you remember the name of the file we just created?
+
+Auto Mode:
+
+octo analyze this text... (If no role is specified, the system auto-assigns the best context).
+
+🤝 Roadmap & Contributions
+This core is 100% Open Source. Our goal is for the community to expand OctoArch's horizons by building new MCP servers (e.g., Home Automation, ERP databases, Spotify, Notion).
+
+If you are interested in building an MCP connector or improving the cognitive engine, please read our CONTRIBUTING.md file.
+
+📄 License
+This project is licensed under the MIT License. See the LICENSE file for details.

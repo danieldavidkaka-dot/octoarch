@@ -9,11 +9,10 @@ dist/
 src/data/*.json
 memory.json
 
-# 🛡️ Ignorar sesión y caché de WhatsApp (Evita errores de permisos y protege la sesión)
-workspace/auth_wa/
+# Ignorar el entorno de pruebas del agente
+workspace/
 
 # 📦 Ignorar el frontend para mantener el repositorio del backend liviano
 frontend/
 
-# Ignorar arch
-arch-extension2-main/
+
