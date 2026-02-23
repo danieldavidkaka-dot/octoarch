@@ -6,11 +6,13 @@ import { Logger } from '../utils/logger';
 import { detectIntent, applyTemplate } from './library';
 import { octoTools } from './agent_tools';
 import { AgentExecutor } from './agent_executor';
-import { MCPManager } from './mcp_manager'; // 🔌 Nueva integración
+import { MCPManager } from './mcp_manager';
 
 export class IntelligenceCore {
+    // 🛡️ Lógica Singleton implementada de forma nativa
+    private static instance: IntelligenceCore | null = null;
+    
     private genAI: GoogleGenerativeAI;
-    // @ts-ignore
     private conversationMgr: ConversationManager;
 
     private constructor() {
@@ -19,13 +21,20 @@ export class IntelligenceCore {
         Logger.info(`🧠 IntelligenceCore inicializado (Modular, Stateful & MCP Ready)`);
     }
 
+    // 🛡️ Método público para obtener la instancia única
+    public static getInstance(): IntelligenceCore {
+        if (!IntelligenceCore.instance) {
+            IntelligenceCore.instance = new IntelligenceCore();
+        }
+        return IntelligenceCore.instance;
+    }
+
     private parseBase64Image(dataURI: string) {
         const split = dataURI.split(',');
         if (split.length !== 2) return null;
         return { inlineData: { data: split[1], mimeType: split[0].split(':')[1].split(';')[0] } };
     }
 
-    // 🏆 Instanciación dinámica del modelo para inyectar herramientas MCP en caliente
     private async getModel() {
         const mcpTools = await MCPManager.getInstance().getDynamicGeminiTools();
         const allTools = [...octoTools, ...mcpTools];
@@ -45,7 +54,6 @@ export class IntelligenceCore {
 
     private async generateWithRetry(request: any, retries = 3): Promise<any> {
         let delay = 5000;
-        // Instanciamos el modelo con las herramientas actualizadas
         const model = await this.getModel();
 
         for (let i = 0; i < retries; i++) {
@@ -70,6 +78,22 @@ export class IntelligenceCore {
             const intent = forcedIntent ? forcedIntent : detectIntent(userPrompt);
             const enrichedPrompt = applyTemplate(intent, userPrompt);
             const isInvoDex = intent.includes('INVODEX');
+
+            // --- NUEVO: SISTEMA DE COMPRESIÓN DE MEMORIA (ROLLING SUMMARY) ---
+            if (!isInvoDex && this.conversationMgr.needsCompression()) {
+                Logger.info("🧠 Memoria a corto plazo llena. Iniciando compresión (Rolling Summary)...");
+                const oldMessages = this.conversationMgr.getMessagesToCompress().map(m => `${m.role}: ${m.content}`).join('\n');
+                const summaryPrompt = `Resume brevemente los siguientes mensajes de nuestra conversación pasada. Mantén los datos clave, rutas de archivos o variables mencionadas. No respondas a los mensajes, solo resúmelos:\n\n${oldMessages}`;
+                
+                try {
+                    const summaryResult = await this.generateWithRetry({ contents: [{ role: 'user', parts: [{ text: summaryPrompt }] }] });
+                    this.conversationMgr.applyCompression(summaryResult.response.text());
+                } catch (e) {
+                    Logger.warn("⚠️ Falló la compresión, forzando recorte de seguridad.");
+                    this.conversationMgr.applyCompression("Contexto previo omitido por límite de memoria.");
+                }
+            }
+            // -----------------------------------------------------------------
             
             const contents: any[] = []; 
 
@@ -124,7 +148,6 @@ export class IntelligenceCore {
     }
 
     private async processExecution(result: any, intent: string, forcedIntent: string | null): Promise<string> {
-        // Movido aquí arriba para que el bloque catch pueda leer el resultado si Google corta la conexión
         let toolOutputs = ""; 
         
         try {
@@ -139,10 +162,8 @@ export class IntelligenceCore {
             for (const call of functionCalls) {
                 let executionResult = "";
 
-                // 1. Ejecución Nativa
                 executionResult = await AgentExecutor.execute(call.name, call.args, activeRole);
                 
-                // 2. Ejecución MCP en cascada (Si AgentExecutor no la reconoce)
                 if (executionResult.includes('Herramienta desconocida')) {
                     try {
                         const mcpResult = await MCPManager.getInstance().executeTool(call.name, call.args);
@@ -170,7 +191,6 @@ export class IntelligenceCore {
         } catch (error: any) {
             Logger.error("❌ Error en processExecution:", error);
             
-            // Intento de rescate 1: Buscar texto plano en la primera respuesta
             try { 
                 const fallbackText = result.response.text(); 
                 if (fallbackText && fallbackText.trim() !== "") {
@@ -178,7 +198,6 @@ export class IntelligenceCore {
                 }
             } catch { /* Ignoramos si falla la extracción de texto */ }
             
-            // Intento de rescate 2: Si hay resultados técnicos, devolverlos sin el formato humano
             if (toolOutputs.trim() !== "") {
                 return `⚙️ **Ejecución Técnica (Fallback):**\n\n${toolOutputs}\n\n⚠️ *(El sistema completó la acción, pero hubo un corte de API al generar la respuesta humana).*`;
             }
@@ -188,11 +207,7 @@ export class IntelligenceCore {
     }
 }
 
-let instance: IntelligenceCore | null = null;
+// 🛡️ Exportación limpia
 export function getBrain(): IntelligenceCore {
-    if (!instance) {
-        // @ts-ignore
-        instance = new IntelligenceCore();
-    }
-    return instance!;
+    return IntelligenceCore.getInstance();
 }

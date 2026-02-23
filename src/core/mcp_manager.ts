@@ -2,13 +2,21 @@ import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
 import { SchemaType, Tool } from '@google/generative-ai';
 import { Logger } from '../utils/logger';
+import { z } from 'zod'; // 🛡️ Nueva importación de Zod
+
+// 🛡️ Esquema estricto para lo que devuelve un servidor MCP
+const McpToolResultSchema = z.object({
+    isError: z.boolean().optional(),
+    content: z.array(z.object({
+        type: z.string(),
+        text: z.string().optional()
+    }).passthrough())
+}).passthrough();
 
 export class MCPManager {
     private static instance: MCPManager | null = null;
     
-    // Diccionario para mantener las conexiones vivas a múltiples servidores MCP
     private clients: Map<string, Client> = new Map();
-    // Diccionario para saber a qué servidor pertenece cada herramienta
     private toolRegistry: Map<string, string> = new Map(); 
 
     private constructor() {}
@@ -20,9 +28,6 @@ export class MCPManager {
         return this.instance;
     }
 
-    /**
-     * Conecta OctoArch a un servidor MCP externo (ej: un script de Python o Node)
-     */
     public async connectServer(serverName: string, command: string, args: string[]): Promise<void> {
         try {
             Logger.info(`🔌 Conectando al servidor MCP: [${serverName}]...`);
@@ -42,10 +47,6 @@ export class MCPManager {
         }
     }
 
-    /**
-     * Interroga a todos los servidores conectados, obtiene sus herramientas 
-     * y las traduce dinámicamente al formato nativo de Gemini
-     */
     public async getDynamicGeminiTools(): Promise<Tool[]> {
         const dynamicDeclarations: any[] = [];
 
@@ -54,11 +55,9 @@ export class MCPManager {
                 const response = await client.listTools();
                 
                 for (const tool of response.tools) {
-                    // Mapeamos el nombre de la herramienta al servidor que la ejecuta
                     this.toolRegistry.set(tool.name, serverName);
 
-                    // Traducción de JSON Schema (MCP) a Gemini SchemaType
-                    const properties: any = {};
+                    const properties: Record<string, any> = {};
                     const required: string[] = tool.inputSchema?.required || [];
 
                     if (tool.inputSchema?.properties) {
@@ -90,10 +89,7 @@ export class MCPManager {
         return dynamicDeclarations.length > 0 ? [{ functionDeclarations: dynamicDeclarations }] : [];
     }
 
-    /**
-     * Ejecuta una herramienta en el servidor MCP correspondiente
-     */
-    public async executeTool(toolName: string, args: any): Promise<string> {
+    public async executeTool(toolName: string, args: Record<string, unknown>): Promise<string> {
         const serverName = this.toolRegistry.get(toolName);
         if (!serverName) {
             throw new Error(`No se encontró un servidor MCP para la herramienta: ${toolName}`);
@@ -106,18 +102,25 @@ export class MCPManager {
 
         Logger.info(`⚡ Ejecutando MCP Tool [${toolName}] en servidor [${serverName}]...`);
         
-        // Añadimos "as any" para que TypeScript deje de quejarse de la estructura de retorno
-        const result = await client.callTool({
+        // 🛡️ Eliminamos "as any" y validamos con Zod
+        const rawResult = await client.callTool({
             name: toolName,
             arguments: args
-        }) as any; 
+        }); 
 
-        // Formatear el resultado para devolverlo al Bucle Cognitivo
+        const parsedResult = McpToolResultSchema.safeParse(rawResult);
+        
+        if (!parsedResult.success) {
+            Logger.error(`Error de validación MCP:`, parsedResult.error);
+            return `❌ [ERROR MCP]: El servidor ${serverName} devolvió datos malformados.`;
+        }
+
+        const result = parsedResult.data;
+
         if (result.isError) {
             return `❌ [ERROR MCP]: ${JSON.stringify(result.content)}`;
         }
         
-        // También añadimos "any" a "c" para que map no falle
-        return result.content.map((c: any) => c.type === 'text' ? c.text : '[Contenido No Textual]').join('\n');
+        return result.content.map(c => c.type === 'text' ? c.text : '[Contenido No Textual]').join('\n');
     }
 }

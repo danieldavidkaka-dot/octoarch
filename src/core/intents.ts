@@ -1,67 +1,88 @@
 /**
- * Octoarch v4.0 - Intent Detection Module
+ * OctoArch v4.2 - Intent Detection Module
  * Copyright (c) 2026 Daniel David Barrios
  * Licensed under GNU GPLv3
  */
 
 /**
- * 🕵️‍♂️ DETECTOR DE INTENCIÓN (v4.0)
- * Analiza el prompt del usuario y decide qué template usar.
+ * 🕵️‍♂️ DETECTOR DE INTENCIÓN HEURÍSTICO (v4.2)
+ * Analiza el prompt del usuario usando un sistema de puntuación
+ * con expresiones regulares para evitar colisiones de subcadenas.
  */
 export function detectIntent(prompt: string): string {
     const p = prompt.toLowerCase();
     
-    // --- 0. INTERACCIÓN HUMANA ---
-    if (p.match(/^(hola|hi|hello|buenos|saludos|hey|qué tal)/)) return "CHAT";
-    if (p.includes("ayuda") || p.includes("help") || p.includes("qué puedes hacer")) return "README_GOD";
+    // --- 0. FAST PATH: INTERACCIÓN HUMANA DIRECTA ---
+    // Si es un saludo seco, no necesitamos calcular puntuaciones
+    if (p.match(/^(hola|hi|hello|buenos|saludos|hey|qué tal)$/i)) return "CHAT";
+    if (p.match(/^(ayuda|help|qué puedes hacer)/i)) return "README_GOD";
 
-    // --- 1. COMUNICACIÓN & MENSAJERÍA (✅ NUEVO: WhatsApp & Social) ---
-    if (p.includes("whatsapp") || p.includes("mensaje") || p.includes("qr") || p.includes("chat")) return "WHATSAPP_LINK";
-    
-    // --- 2. AGENCIA & NEGOCIO ---
-    // Finanzas (CFO)
-    if (p.includes("costo") || p.includes("presupuesto") || p.includes("financiero") || p.includes("roi") || p.includes("burn rate")) return "CFO_ADVISOR";
-    // Marketing (CMO)
-    if (p.includes("marketing") || p.includes("mercado") || p.includes("go-to-market") || p.includes("lanzamiento")) return "MARKETING_GURU";
-    if (p.includes("seo") || p.includes("ranking") || p.includes("keyword") || p.includes("palabras clave")) return "SEO_AUDIT";
-    if (p.includes("copy") || p.includes("texto persuasivo") || p.includes("blog") || p.includes("post") || p.includes("artículo")) return "COPYWRITER";
-    if (p.includes("email") && (p.includes("venta") || p.includes("frío") || p.includes("cold"))) return "COLD_EMAIL";
-    // Legal
-    if (p.includes("legal") || p.includes("contrato") || p.includes("términos") || p.includes("privacidad")) return "LEGAL_DRAFT";
-    
-    // --- 3. GESTIÓN Y PRODUCTO ---
-    if (p.includes("prd") || p.includes("requisitos") || p.includes("user stories") || p.includes("historias de usuario") || p.includes("pitch")) return "PRD_MASTER";
-    if (p.includes("api") || p.includes("swagger") || p.includes("endpoint") || p.includes("openapi")) return "API_DESIGNER";
-    
-    // --- 4. INFRAESTRUCTURA Y DOCS ---
-    if (p.includes("docker") || p.includes("deploy") || p.includes("ci/cd") || p.includes("pipeline") || p.includes("nube")) return "DEVOPS_PRO";
-    if (p.includes("readme") || p.includes("documentación") || p.includes("manual") || p.includes("guía")) return "README_GOD";
+    // --- 1. DICCIONARIO DE INTENCIONES Y PALABRAS CLAVE ---
+    // Agrupamos los roles con sus triggers para evaluar el contexto global
+    const intentDictionary: Record<string, string[]> = {
+        "WHATSAPP_LINK": ["whatsapp", "mensaje", "qr", "chat"],
+        "CFO_ADVISOR": ["costo", "presupuesto", "financiero", "roi", "burn rate"],
+        "MARKETING_GURU": ["marketing", "mercado", "go-to-market", "lanzamiento"],
+        "SEO_AUDIT": ["seo", "ranking", "keyword", "palabras clave"],
+        "COPYWRITER": ["copy", "texto persuasivo", "blog", "post", "artículo"],
+        "COLD_EMAIL": ["email frío", "venta por email", "cold email"],
+        "LEGAL_DRAFT": ["legal", "contrato", "términos", "privacidad"],
+        "PRD_MASTER": ["prd", "requisitos", "user stories", "historias de usuario", "pitch"],
+        "API_DESIGNER": ["api", "swagger", "endpoint", "openapi"],
+        "DEVOPS_PRO": ["docker", "deploy", "ci/cd", "pipeline", "nube"],
+        "README_GOD": ["readme", "documentación", "manual", "guía"],
+        "RESEARCHER": ["navega", "visita", "url", "lee la web", "http"],
+        "LOGIC": ["seguridad", "vulnerable", "owasp"],
+        "FIX": ["error", "bug", "fix", "repara"],
+        "CODE_REVIEW": ["review", "revisa", "calidad", "lint"],
+        "LEGACY_MODERNIZER": ["legacy", "migrar", "refactorizar"],
+        "UNIT_TEST": ["test", "prueba", "qa", "coverage"],
+        "R1_THINK": ["piensa", "analiza", "razona", "investiga"],
+        "DB_ARCHITECT": ["base de datos", "sql", "schema", "db"],
+        "BLUEPRINT": ["arquitectura", "estructura", "blueprint"],
+        "SCRAPER": ["scrap", "extraer", "crawler"],
+        "DATA": ["datos falsos", "mock", "generar datos"],
+        "FFMPEG_WIZARD": ["ffmpeg", "video", "audio"],
+        "MOBILE_DEV": ["móvil", "react native", "ios", "android"],
+        "UI/UX": ["diseño", "ui", "ux", "figma"],
+        "Qt_EMAIL": ["email html", "newsletter"],
+        "FRONTEND_MASTER": ["componente", "tailwind", "css", "frontend"],
+        "FLOW": ["diagrama", "flujo"]
+    };
 
-    // --- 5. INVESTIGACIÓN Y NAVEGACIÓN ---
-    if (p.includes("navega") || p.includes("visita") || p.includes("url") || p.includes("lee la web") || p.includes("http")) return "RESEARCHER";
+    // --- 2. MOTOR DE PUNTUACIÓN (SCORING ENGINE) ---
+    let bestIntent = "DEV"; // Rol por defecto (Políglota)
+    let highestScore = 0;
 
-    // --- 6. SEGURIDAD Y MANTENIMIENTO ---
-    if (p.includes("seguridad") || p.includes("vulnerable") || p.includes("owasp")) return "LOGIC";
-    if (p.includes("error") || p.includes("bug") || p.includes("fix") || p.includes("repara")) return "FIX";
-    if (p.includes("review") || p.includes("revisa") || p.includes("calidad") || p.includes("lint")) return "CODE_REVIEW";
-    if (p.includes("legacy") || p.includes("migrar") || p.includes("refactorizar")) return "LEGACY_MODERNIZER";
-    if (p.includes("test") || p.includes("prueba") || p.includes("qa") || p.includes("coverage")) return "UNIT_TEST";
-    
-    // --- 7. DATOS Y LÓGICA ---
-    if (p.includes("piensa") || p.includes("analiza") || p.includes("razona") || p.includes("investiga")) return "R1_THINK";
-    if (p.includes("base de datos") || p.includes("sql") || p.includes("schema") || p.includes("db")) return "DB_ARCHITECT";
-    if (p.includes("arquitectura") || p.includes("estructura") || p.includes("blueprint")) return "BLUEPRINT";
-    if (p.includes("scrap") || p.includes("extraer") || p.includes("crawler")) return "SCRAPER";
-    if (p.includes("datos falsos") || p.includes("mock") || p.includes("generar datos")) return "DATA";
-    if (p.includes("ffmpeg") || p.includes("video") || p.includes("audio")) return "FFMPEG_WIZARD";
-    
-    // --- 8. DISEÑO & UI/UX ---
-    if (p.includes("móvil") || p.includes("react native") || p.includes("ios") || p.includes("android")) return "MOBILE_DEV";
-    if (p.includes("diseño") || p.includes("ui") || p.includes("ux") || p.includes("figma")) return "UI/UX";
-    if (p.includes("email html") || p.includes("newsletter")) return "Qt_EMAIL";
-    if (p.includes("componente") || p.includes("tailwind") || p.includes("css")) return "FRONTEND_MASTER";
-    if (p.includes("diagrama") || p.includes("flujo")) return "FLOW";
+    for (const [intent, keywords] of Object.entries(intentDictionary)) {
+        let currentScore = 0;
 
-    // Default: Modo Experto Políglota
-    return "DEV"; 
+        for (const keyword of keywords) {
+            // Usamos \b para buscar palabras exactas. 
+            // Así "equipo" no activa "ui", y "curl" no activa "url".
+            // Escapamos caracteres especiales por si hay frases como "ci/cd"
+            const escapedKeyword = keyword.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
+            const regex = new RegExp(`\\b${escapedKeyword}\\b`, 'gi');
+            
+            const matches = p.match(regex);
+            if (matches) {
+                // Sumamos 1 punto por cada vez que se menciona la palabra clave
+                currentScore += matches.length;
+            }
+        }
+
+        // Si esta intención tiene más coincidencias semánticas que la anterior, gana
+        if (currentScore > highestScore) {
+            highestScore = currentScore;
+            bestIntent = intent;
+        }
+    }
+
+    // --- 3. OVERRIDE ESTRICTO (Casos especiales) ---
+    // Si la puntuación fue un empate a 0, pero detectamos un comando InvoDex
+    if (highestScore === 0 && p.includes("invodex")) {
+        return "INVODEX";
+    }
+
+    return bestIntent;
 }

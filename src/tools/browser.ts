@@ -4,6 +4,10 @@ import { Logger } from '../utils/logger';
 export class BrowserTool {
     // 🏆 SINGLETON: La instancia maestra del navegador
     private static browserInstance: Browser | null = null;
+    
+    // 🛡️ GESTIÓN DE MEMORIA: Temporizador para cerrar el navegador si no se usa
+    private static idleTimeout: NodeJS.Timeout | null = null;
+    private static readonly IDLE_TIME_MS = 5 * 60 * 1000; // 5 minutos de inactividad
 
     // Método para obtener o encender el navegador maestro
     private static async getBrowser(): Promise<Browser> {
@@ -20,7 +24,35 @@ export class BrowserTool {
                 ] 
             });
         }
+        
+        // 🛡️ Cada vez que pedimos el navegador, cancelamos el apagado automático
+        if (this.idleTimeout) {
+            clearTimeout(this.idleTimeout);
+            this.idleTimeout = null;
+        }
+        
         return this.browserInstance;
+    }
+
+    // 🛡️ Método para programar el apagado tras inactividad
+    private static scheduleIdleShutdown() {
+        if (this.idleTimeout) {
+            clearTimeout(this.idleTimeout);
+        }
+        
+        this.idleTimeout = setTimeout(async () => {
+            if (this.browserInstance) {
+                Logger.info('💤 Inactividad web detectada (5 min). Apagando Puppeteer para liberar RAM...');
+                try {
+                    await this.browserInstance.close();
+                } catch (e) {
+                    Logger.error('❌ Error al cerrar Puppeteer:', e);
+                } finally {
+                    this.browserInstance = null;
+                    this.idleTimeout = null;
+                }
+            }
+        }, this.IDLE_TIME_MS);
     }
 
     static async inspect(url: string): Promise<string> {
@@ -73,11 +105,18 @@ export class BrowserTool {
                 `📄 CONTENIDO VISIBLE:\n${bodyHTML.substring(0, 8000)}... (truncado por memoria)`
             ].join('\n\n');
 
+            // 🛡️ Al terminar la tarea, activamos la cuenta regresiva de apagado
+            this.scheduleIdleShutdown();
+
             return report;
 
         } catch (error: any) {
             // Si algo falla, intentamos cerrar la pestaña huérfana para no tener fugas de RAM
             if (page) await page.close().catch(() => {});
+            
+            // 🛡️ Incluso si falla, activamos la cuenta regresiva
+            this.scheduleIdleShutdown();
+            
             return `❌ Error navegando: ${error.message}`;
         }
     }
