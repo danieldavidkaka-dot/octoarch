@@ -32,16 +32,20 @@ export class OctoServer {
         // 🌐 ENDPOINT PARA LA EXTENSIÓN CHROME (>arch)
         this.app.post('/api/chat', async (req, res) => {
             try {
-                const { message, forcedIntent, imageBase64 } = req.body;
+                // 🚀 EXTRAEMOS EL POSIBLE clientId DEL FRONTEND
+                const { message, forcedIntent, imageBase64, clientId } = req.body;
                 
                 if (!message) {
                     return res.status(400).json({ error: "El campo 'message' es obligatorio" });
                 }
 
-                Logger.info(`[API HTTP] Solicitud entrante: "${message.substring(0, 50)}..." [Modo: ${forcedIntent || 'Auto'}]`);
+                // Si la extensión no manda ID, le asignamos uno estático por defecto
+                const sessionId = clientId || "chrome_extension";
 
-                // 🚀 ¡AQUÍ ESTÁ LA MAGIA! Ahora sí le pasamos imageBase64 al cerebro
-                const aiResponse = await this.brain.generateResponse(message, forcedIntent, imageBase64);
+                Logger.info(`[API HTTP] Solicitud entrante: "${message.substring(0, 50)}..." [Modo: ${forcedIntent || 'Auto'}, Sesión: ${sessionId}]`);
+
+                // 🚀 AQUÍ ESTÁ EL CAMBIO: Le pasamos el sessionId al cerebro
+                const aiResponse = await this.brain.generateResponse(sessionId, message, forcedIntent, imageBase64);
 
                 res.json({
                     success: true,
@@ -71,6 +75,8 @@ export class OctoServer {
                     
                     let userText = "";
                     let forcedIntent: string | null = null;
+                    // Extraemos un posible ID del mensaje WS
+                    let sessionId = parsed.clientId || "web_socket_client";
 
                     if (parsed.type === "agent:turn" && parsed.data) {
                         userText = parsed.data.message;
@@ -81,9 +87,10 @@ export class OctoServer {
                         userText = raw;
                     }
 
-                    Logger.info(`[WS] Procesando solicitud: "${userText.substring(0, 50)}..." [Modo: ${forcedIntent || 'Auto'}]`);
+                    Logger.info(`[WS] Procesando solicitud: "${userText.substring(0, 50)}..." [Modo: ${forcedIntent || 'Auto'}, Sesión: ${sessionId}]`);
 
-                    const aiResponse = await this.brain.generateResponse(userText, forcedIntent);
+                    // 🚀 AQUÍ ESTÁ EL CAMBIO: Le pasamos el sessionId al cerebro
+                    const aiResponse = await this.brain.generateResponse(sessionId, userText, forcedIntent);
 
                     ws.send(JSON.stringify({
                         type: 'response',

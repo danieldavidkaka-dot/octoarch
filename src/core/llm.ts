@@ -13,10 +13,11 @@ export class IntelligenceCore {
     private static instance: IntelligenceCore | null = null;
     
     private genAI: GoogleGenerativeAI;
-    private conversationMgr: ConversationManager;
+    // 🛡️ Mapa para aislar la memoria de cada usuario/chat (llave: sessionId)
+    private sessions: Map<string, ConversationManager>;
 
     private constructor() {
-        this.conversationMgr = new ConversationManager();
+        this.sessions = new Map<string, ConversationManager>();
         this.genAI = new GoogleGenerativeAI(env.GEMINI_API_KEY);
         Logger.info(`🧠 IntelligenceCore inicializado (Modular, Stateful & MCP Ready)`);
     }
@@ -72,25 +73,33 @@ export class IntelligenceCore {
         throw new Error("❌ Se excedió el límite de reintentos.");
     }
 
-    async generateResponse(userPrompt: string, forcedIntent: string | null = null, imageBase64: string | null = null): Promise<string> {
+    // 🛡️ ACTUALIZADO: Añadido sessionId para gestionar multi-usuario
+    async generateResponse(sessionId: string, userPrompt: string, forcedIntent: string | null = null, imageBase64: string | null = null): Promise<string> {
         try {
+            // 🛡️ Aislamiento de sesión: Si el usuario es nuevo, creamos su propia memoria
+            if (!this.sessions.has(sessionId)) {
+                this.sessions.set(sessionId, new ConversationManager());
+                Logger.info(`🧠 Nueva sesión cognitiva creada para: ${sessionId}`);
+            }
+            const activeConversation = this.sessions.get(sessionId)!;
+
             const memory = await MemorySystem.recall();
             const intent = forcedIntent ? forcedIntent : detectIntent(userPrompt);
             const enrichedPrompt = applyTemplate(intent, userPrompt);
             const isInvoDex = intent.includes('INVODEX');
 
             // --- NUEVO: SISTEMA DE COMPRESIÓN DE MEMORIA (ROLLING SUMMARY) ---
-            if (!isInvoDex && this.conversationMgr.needsCompression()) {
-                Logger.info("🧠 Memoria a corto plazo llena. Iniciando compresión (Rolling Summary)...");
-                const oldMessages = this.conversationMgr.getMessagesToCompress().map(m => `${m.role}: ${m.content}`).join('\n');
+            if (!isInvoDex && activeConversation.needsCompression()) {
+                Logger.info(`🧠 Memoria a corto plazo llena [${sessionId}]. Iniciando compresión (Rolling Summary)...`);
+                const oldMessages = activeConversation.getMessagesToCompress().map(m => `${m.role}: ${m.content}`).join('\n');
                 const summaryPrompt = `Resume brevemente los siguientes mensajes de nuestra conversación pasada. Mantén los datos clave, rutas de archivos o variables mencionadas. No respondas a los mensajes, solo resúmelos:\n\n${oldMessages}`;
                 
                 try {
                     const summaryResult = await this.generateWithRetry({ contents: [{ role: 'user', parts: [{ text: summaryPrompt }] }] });
-                    this.conversationMgr.applyCompression(summaryResult.response.text());
+                    activeConversation.applyCompression(summaryResult.response.text());
                 } catch (e) {
-                    Logger.warn("⚠️ Falló la compresión, forzando recorte de seguridad.");
-                    this.conversationMgr.applyCompression("Contexto previo omitido por límite de memoria.");
+                    Logger.warn(`⚠️ Falló la compresión [${sessionId}], forzando recorte de seguridad.`);
+                    activeConversation.applyCompression("Contexto previo omitido por límite de memoria.");
                 }
             }
             // -----------------------------------------------------------------
@@ -98,8 +107,8 @@ export class IntelligenceCore {
             const contents: any[] = []; 
 
             if (!isInvoDex) {
-                this.conversationMgr.add('user', userPrompt);
-                const history = this.conversationMgr.getHistory();
+                activeConversation.add('user', userPrompt);
+                const history = activeConversation.getHistory();
                 
                 let lastRole = "";
                 for (const msg of history) {
@@ -113,9 +122,9 @@ export class IntelligenceCore {
                         lastRole = role;
                     }
                 }
-                Logger.info(`Intención: ${intent} | Modo: Stateful Nativo`);
+                Logger.info(`Intención: ${intent} | Modo: Stateful Nativo | Sesión: ${sessionId}`);
             } else {
-                Logger.info(`Intención: ${intent} | Modo: Stateless`);
+                Logger.info(`Intención: ${intent} | Modo: Stateless | Sesión: ${sessionId}`);
             }
 
             const currentTurnText = `[ENTORNO]\nMemoria Global: ${memory}\n\n[INSTRUCCIÓN]\nActúas como: ${intent}\n${enrichedPrompt}`;
@@ -136,13 +145,13 @@ export class IntelligenceCore {
             const finalProcessedResponse = await this.processExecution(result, intent, forcedIntent);
 
             if (!isInvoDex) {
-                this.conversationMgr.add('model', finalProcessedResponse);
+                activeConversation.add('model', finalProcessedResponse);
             }
 
             return finalProcessedResponse;
 
         } catch (error: any) {
-            Logger.error("❌ Error en Core:", error);
+            Logger.error(`❌ Error en Core [${sessionId}]:`, error);
             return `❌ Error: ${error.message}`;
         }
     }

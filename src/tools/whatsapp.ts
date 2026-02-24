@@ -116,8 +116,8 @@ export class WhatsAppService {
                     // Reaccionamos para indicar que empezamos a procesar
                     await msg.react('🧠');
 
-                    // 🚀 Enviamos la orden al LLM junto con el rol forzado (si existe)
-                    const aiResponse = await this.brain.generateResponse(finalQuery, forcedIntent);
+                    // 🚀 AQUÍ ESTÁ EL CAMBIO: Pasamos msg.from (el número de teléfono) como sessionId
+                    const aiResponse = await this.brain.generateResponse(msg.from, finalQuery, forcedIntent);
 
                     // Reaccionamos con un check y enviamos la respuesta
                     await msg.react('✅');

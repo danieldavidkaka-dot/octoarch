@@ -7,16 +7,17 @@ export class AgentExecutor {
         let isAllowed = true;
         let denyReason = "";
 
-        // 🛡️ Validación Estricta de RBAC
+        // 🛡️ Validación Estricta de RBAC (Role-Based Access Control)
         if (activeRole === 'CHAT') {
             if (['executeCommand', 'createFile', 'readFile', 'inspectWeb'].includes(opName)) {
                 isAllowed = false;
                 denyReason = "Modo Seguro (Chat) no permite herramientas.";
             }
         } 
-        else if ((activeRole === 'CFO_ADVISOR' || activeRole === 'RESEARCHER') && ['executeCommand', 'createFile'].includes(opName)) {
+        // 🔒 Añadimos INVODEX aquí para blindar el procesamiento de facturas
+        else if ((activeRole === 'CFO_ADVISOR' || activeRole === 'RESEARCHER' || activeRole === 'INVODEX') && ['executeCommand', 'createFile'].includes(opName)) {
             isAllowed = false;
-            denyReason = "Rol Read-Only no permite modificar el sistema.";
+            denyReason = `El rol ${activeRole} es de procesamiento/lectura, no permite modificar el sistema base.`;
         }
 
         if (!isAllowed) {
