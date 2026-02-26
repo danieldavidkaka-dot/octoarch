@@ -12,15 +12,25 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
     return {
         tools: [{
             name: "procesar_factura",
-            description: "Procesa una factura y la indexa simulando una conexión a un sistema ERP.",
+            description: "Procesa una factura y crea un documento preliminar en el sistema ERP (SAP B1 / Profit Plus).",
             inputSchema: {
                 type: "object",
                 properties: {
-                    nroFactura: { type: "string" },
-                    cliente: { type: "string" },
-                    monto: { type: "number" }
+                    rif_proveedor: { type: "string" },
+                    nombre_proveedor: { type: "string" },
+                    numero_factura: { type: "string" },
+                    numero_control: { type: "string" },
+                    fecha_emision: { type: "string" },
+                    subtotal_base_imponible: { type: "number" },
+                    porcentaje_iva: { type: "number" },
+                    monto_iva: { type: "number" },
+                    monto_total: { type: "number" }
                 },
-                required: ["nroFactura", "cliente", "monto"]
+                required: [
+                    "rif_proveedor", "nombre_proveedor", "numero_factura", 
+                    "numero_control", "fecha_emision", "subtotal_base_imponible", 
+                    "porcentaje_iva", "monto_iva", "monto_total"
+                ]
             }
         }]
     };
@@ -29,13 +39,17 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
 // 2. Definimos qué hace la herramienta cuando OctoArch la llama
 server.setRequestHandler(CallToolRequestSchema, async (request) => {
     if (request.params.name === "procesar_factura") {
-        const { nroFactura, cliente, monto } = request.params.arguments as any;
+        const { 
+            rif_proveedor, nombre_proveedor, numero_factura, 
+            numero_control, fecha_emision, subtotal_base_imponible, 
+            porcentaje_iva, monto_iva, monto_total 
+        } = request.params.arguments as any;
         
-        // Aquí en el futuro iría tu conexión real a SQL o SAP
+        // Aquí en el futuro irá tu conexión real a SQL, SAP B1 o Profit Plus
         return {
             content: [{
                 type: "text",
-                text: `✅ [MCP ERP SERVER] Factura ${nroFactura} del cliente ${cliente} por $${monto} procesada e indexada correctamente en el ERP.`
+                text: `✅ [MCP ERP SERVER] Documento Preliminar Creado.\nProveedor: ${nombre_proveedor} (${rif_proveedor})\nFactura: ${numero_factura} | Control: ${numero_control}\nFecha: ${fecha_emision}\nTotal: Bs. ${monto_total} (Base: ${subtotal_base_imponible} + IVA: ${monto_iva})`
             }]
         };
     }

@@ -1,12 +1,14 @@
 import { Client, LocalAuth, Message } from 'whatsapp-web.js';
 import qrcode from 'qrcode-terminal';
+import fs from 'fs'; // 📁 Importamos File System
+import path from 'path'; // 🗺️ Importamos Path para las rutas
 import { Logger } from '../utils/logger';
-import { IntelligenceCore, getBrain } from '../core/llm'; // 🧠 Importamos el Cerebro global
+import { IntelligenceCore, getBrain } from '../core/llm'; 
 
 export class WhatsAppService {
     private static client: Client;
     private static isReady: boolean = false;
-    private static brain: IntelligenceCore; // 🧠 Instancia del cerebro
+    private static brain: IntelligenceCore; 
 
     // 🗺️ DICCIONARIO DE ROLES (Aliases para WhatsApp)
     private static roleMap: Record<string, string> = {
@@ -21,13 +23,14 @@ export class WhatsAppService {
         'cmo': 'MARKETING_GURU',
         'legal': 'LEGAL_DRAFT',
         'copy': 'COPYWRITER',
-        'seo': 'SEO_AUDIT'
+        'seo': 'SEO_AUDIT',
+        'invodex': 'INVODEX',
+        'factura': 'INVODEX'
     };
 
     static async initialize() {
-        Logger.info("📱 Iniciando servicio de WhatsApp (Modo Robusto con Roles)...");
+        Logger.info("📱 Iniciando servicio de WhatsApp (Modo Robusto con Roles, Visión y Auto-Guardado)...");
 
-        // Inicializamos el cerebro para WhatsApp
         this.brain = getBrain();
 
         this.client = new Client({
@@ -54,13 +57,11 @@ export class WhatsAppService {
             }
         });
 
-        // 1. GENERACIÓN DE QR
         this.client.on('qr', (qr: string) => {
             Logger.info("📱 ¡NUEVO QR! Escanea este RÁPIDO con tu celular:");
             qrcode.generate(qr, { small: true });
         });
 
-        // 2. ESTADOS DE CONEXIÓN
         this.client.on('authenticated', () => {
             Logger.info("🔑 ¡Autenticado correctamente! Cargando chats...");
         });
@@ -74,64 +75,100 @@ export class WhatsAppService {
             this.isReady = true;
         });
 
-        // 3. ESCUCHA DE MENSAJES
         this.client.on('message_create', async (msg: Message) => {
-            // Ignorar estados o mensajes vacíos
-            if (msg.isStatus || msg.type !== 'chat' || !msg.body) return;
+            if (msg.isStatus || (msg.type !== 'chat' && msg.type !== 'image') || !msg.body) return;
 
-            // 🔒 BLOQUEO DE SEGURIDAD (OWNER ONLY)
-            // Si el mensaje NO fue escrito por ti (desde tu cuenta), se ignora de inmediato.
             if (!msg.fromMe) {
-                return;
+                return; // Solo responde a tus propios mensajes
             }
 
-            // Si es un comando simple de prueba, responde rápido y sale
             if (msg.body === '!ping') {
-                await msg.reply('🐙 Octoarch v4.0 Online & Ready.');
+                await msg.reply('🐙 Octoarch v4.0 Online, Ready & Seeing.');
                 return;
             }
 
-            // 🧠 CONEXIÓN AL CEREBRO DE GEMINI Y ENRUTADOR DE ROLES
             if (msg.body.toLowerCase().startsWith('octo ')) {
                 try {
-                    // Quitamos la palabra "octo " del inicio
                     const rawQuery = msg.body.substring(5).trim();
-                    
-                    // Extraemos la primera palabra para ver si es un comando de ROL
                     const firstWord = rawQuery.split(' ')[0].toLowerCase();
                     
                     let forcedIntent: string | null = null;
                     let finalQuery = rawQuery;
 
-                    // Verificamos si la primera palabra coincide con nuestro diccionario de roles
                     if (this.roleMap[firstWord]) {
                         forcedIntent = this.roleMap[firstWord];
-                        // Le quitamos el comando de rol a la oración para no confundir a la IA
-                        finalQuery = rawQuery.substring(firstWord.length).trim();
-                        Logger.info(`🔎 [WhatsApp] Modo detectado: ${forcedIntent}`);
-                    } else {
+    finalQuery = rawQuery.substring(firstWord.length).trim();
+    
+    // 🛡️ CORRECCIÓN: Si solo mandó el comando (ej: "octo invodex") y una foto, le damos un texto base
+    if (finalQuery === "" && msg.hasMedia) {
+        finalQuery = "Por favor, analiza la imagen adjunta y extrae la información requerida.";
+    }
+
+    Logger.info(`🔎 [WhatsApp] Modo detectado: ${forcedIntent}`);
+} else {
                         Logger.info(`🔎 [WhatsApp] Modo detectado: AUTO (Sin restricciones)`);
                     }
 
-                    // Reaccionamos para indicar que empezamos a procesar
                     await msg.react('🧠');
 
-                    // 🚀 AQUÍ ESTÁ EL CAMBIO: Pasamos msg.from (el número de teléfono) como sessionId
-                    const aiResponse = await this.brain.generateResponse(msg.from, finalQuery, forcedIntent);
+                    let imageBase64: string | null = null;
 
-                    // Reaccionamos con un check y enviamos la respuesta
+                    if (msg.hasMedia) {
+                        Logger.info("📥 Descargando imagen adjunta desde WhatsApp...");
+                        const media = await msg.downloadMedia();
+                        
+                        if (media && media.mimetype.startsWith('image/')) {
+                            imageBase64 = `data:${media.mimetype};base64,${media.data}`;
+                            Logger.info(`📸 Imagen procesada correctamente. Tipo: ${media.mimetype}`);
+                        } else {
+                            Logger.warn("⚠️ El archivo adjunto no es una imagen soportada.");
+                        }
+                    }
+
+                    const aiResponse = await this.brain.generateResponse(msg.from, finalQuery, forcedIntent, imageBase64);
+
+                    // 💾 LÓGICA DE GUARDADO EN CARPETA SEPARADA PARA INVODEX
+                    if (forcedIntent === 'INVODEX') {
+                        try {
+                            const waOutputDir = path.join(process.cwd(), 'workspace', 'invodex_wa');
+                            
+                            // Crear la carpeta si no existe
+                            if (!fs.existsSync(waOutputDir)) {
+                                fs.mkdirSync(waOutputDir, { recursive: true });
+                            }
+
+                            // Limpiar el número de teléfono para usarlo en el nombre de archivo (ej: 58414..._1708999.json)
+                            const safePhone = msg.from.replace(/[^a-zA-Z0-9]/g, '_');
+                            const timestamp = Date.now();
+                            const fileName = `factura_${safePhone}_${timestamp}.json`;
+                            const filePath = path.join(waOutputDir, fileName);
+
+                            // Extraer el JSON limpio (por si Gemini escupe texto alrededor de los backticks ```json ... ```)
+                            let jsonContent = aiResponse;
+                            const jsonMatch = aiResponse.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
+                            if (jsonMatch) {
+                                jsonContent = jsonMatch[1].trim();
+                            }
+
+                            // Guardar en disco
+                            fs.writeFileSync(filePath, jsonContent, 'utf-8');
+                            Logger.info(`💾 [InvoDex WA] JSON de factura guardado exitosamente en: ${filePath}`);
+                        } catch (fsError) {
+                            Logger.error("❌ Error guardando el JSON en workspace:", fsError);
+                        }
+                    }
+
                     await msg.react('✅');
                     await msg.reply(aiResponse);
 
                 } catch (error) {
                     Logger.error("❌ Error en WhatsApp AI:", error);
                     await msg.react('❌');
-                    await msg.reply("⚠️ Tuve un fallo crítico procesando la instrucción.");
+                    await msg.reply("⚠️ Tuve un fallo crítico procesando la instrucción o imagen.");
                 }
             }
         });
 
-        // 4. INICIALIZACIÓN
         try {
             await this.client.initialize();
         } catch (error) {

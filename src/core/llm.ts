@@ -158,6 +158,7 @@ export class IntelligenceCore {
 
     private async processExecution(result: any, intent: string, forcedIntent: string | null): Promise<string> {
         let toolOutputs = ""; 
+        let extractedJson = ""; // 🛡️ NUEVA VARIABLE: Aquí atrapamos el JSON antes de que se le olvide
         
         try {
             const functionCalls = result.response.functionCalls();
@@ -169,6 +170,11 @@ export class IntelligenceCore {
             const activeRole = forcedIntent || 'Auto';
 
             for (const call of functionCalls) {
+                // 🛡️ CAPTURA DE MEMORIA: Si usó procesar_factura, guardamos sus argumentos
+                if (call.name === 'procesar_factura') {
+                    extractedJson = JSON.stringify(call.args, null, 2);
+                }
+
                 let executionResult = "";
 
                 executionResult = await AgentExecutor.execute(call.name, call.args, activeRole);
@@ -190,7 +196,15 @@ export class IntelligenceCore {
 
             if (operationsPerformed) {
                 Logger.info("🔄 Bucle Cognitivo iniciado...");
-                const loopPrompt = `[RESULTADOS TÉCNICOS]\n${toolOutputs}\n\n[INSTRUCCIÓN]\nAnaliza los resultados técnicos de las herramientas que acabas de usar y formula la respuesta final para el usuario. No menciones el JSON.`;
+                
+                // 🚀 OPTIMIZACIÓN INVODEX: Ensamblaje determinista (Evita una 2da llamada a la API)
+                if (activeRole === 'INVODEX' || intent.includes('INVODEX')) {
+                    Logger.info("⚡ InvoDex: Respuesta ensamblada localmente (Bypass de LLM).");
+                    return `\`\`\`json\n${extractedJson}\n\`\`\`\n\n${toolOutputs.trim()}`;
+                }
+
+                // Bucle cognitivo normal para otros roles
+                let loopPrompt = `[RESULTADOS TÉCNICOS]\n${toolOutputs}\n\n[INSTRUCCIÓN]\nAnaliza los resultados técnicos de las herramientas que acabas de usar y formula la respuesta final para el usuario. No menciones el JSON.`;
                 const finalResponse = await this.generateWithRetry({ contents: [{ role: 'user', parts: [{ text: loopPrompt }] }] });
                 return finalResponse.response.text();
             }
@@ -214,7 +228,7 @@ export class IntelligenceCore {
             return "❌ Error procesando las herramientas.";
         }
     }
-}
+} // 🛡️ LLAVE RESTAURADA AQUÍ
 
 // 🛡️ Exportación limpia
 export function getBrain(): IntelligenceCore {

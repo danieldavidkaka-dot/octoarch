@@ -2,6 +2,8 @@ import { WebSocketServer, WebSocket } from 'ws';
 import express from 'express';
 import http from 'http';
 import cors from 'cors';
+import fs from 'fs'; // 📁 Importamos File System para el auto-guardado
+import path from 'path'; // 🗺️ Importamos Path
 import { Logger } from '../utils/logger';
 import { IntelligenceCore, getBrain } from '../core/llm';
 
@@ -46,6 +48,37 @@ export class OctoServer {
 
                 // 🚀 AQUÍ ESTÁ EL CAMBIO: Le pasamos el sessionId al cerebro
                 const aiResponse = await this.brain.generateResponse(sessionId, message, forcedIntent, imageBase64);
+
+                // 💾 LÓGICA DE GUARDADO EN CARPETA SEPARADA PARA INVODEX (EXTENSIÓN WEB)
+                if (forcedIntent === 'INVODEX') {
+                    try {
+                        const extOutputDir = path.join(process.cwd(), 'workspace', 'invodex_ext');
+                        
+                        // Crear la carpeta si no existe
+                        if (!fs.existsSync(extOutputDir)) {
+                            fs.mkdirSync(extOutputDir, { recursive: true });
+                        }
+                        
+                        // Limpiar la sesión para usarla en el nombre de archivo
+                        const safeSession = sessionId.replace(/[^a-zA-Z0-9]/g, '_');
+                        const timestamp = Date.now();
+                        const fileName = `factura_web_${safeSession}_${timestamp}.json`;
+                        const filePath = path.join(extOutputDir, fileName);
+
+                        // Extraer el JSON limpio
+                        let jsonContent = aiResponse;
+                        const jsonMatch = aiResponse.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
+                        if (jsonMatch) {
+                            jsonContent = jsonMatch[1].trim();
+                        }
+
+                        // Guardar en disco
+                        fs.writeFileSync(filePath, jsonContent, 'utf-8');
+                        Logger.info(`💾 [InvoDex Web] JSON de factura guardado exitosamente en: ${filePath}`);
+                    } catch (fsError) {
+                        Logger.error("❌ Error guardando el JSON web en workspace:", fsError);
+                    }
+                }
 
                 res.json({
                     success: true,
