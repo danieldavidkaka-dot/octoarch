@@ -1,90 +1,70 @@
-# 🐙 OctoArch v4.2 - The Cognitive Runtime
+# 🐙 OctoArch - The Cognitive Runtime
 
 [![AI for Good](https://img.shields.io/badge/AI-Make_the_world_a_better_place-success)](#) [![Free Venezuela](https://img.shields.io/badge/Free-Venezuela_🇻🇪_|_Free_the_world_❤️-ff0000)](#)
 
 ![OctoArch](assets/wmremove-transformed.png)
 
-**OctoArch** is not just another chatbot. It is an open-source **Cognitive Runtime Environment** powered by Gemini 2.5 Flash. It is designed to orchestrate local workflows, perform deep web research, and connect to any external ecosystem using Anthropic's **MCP (Model Context Protocol)**.
+# 📱 OctoArch WhatsApp Interface
 
-Its native interface isn't a standard web dashboard; it lives directly in your terminal and via **WhatsApp**, giving you a complete systems orchestrator in the palm of your hand.
+El módulo de WhatsApp de OctoArch no es un simple bot transaccional. Es la puerta de enlace móvil al **Cognitive Runtime**, permitiéndote ejecutar flujos de trabajo complejos, administrar servidores (vía MCP) y procesar documentos directamente desde tu teléfono mediante la librería `whatsapp-web.js`.
 
----
+## ✨ Características Principales
 
-## ✨ Core Features
+- 🧠 **Conexión Directa al Cognitive Core**: Cada número de teléfono mantiene una sesión aislada con memoria a corto plazo (Garbage Collector y TTL integrados).
+- 📸 **Flujo InvoDex Zero-Friction**: Envía la foto de una factura sin texto. El sistema auto-detectará la intención (`INVODEX`), extraerá los 9 campos fiscales, generará el JSON y lo inyectará en el ERP vía MCP.
+- 🔀 **Enrutamiento por Roles**: Usa prefijos como `octo dev`, `octo research` o `octo chat` para forzar a la IA a adoptar perfiles específicos con herramientas pre-asignadas.
+- 💾 **Auto-Guardado Local**: Los documentos procesados (como las facturas) se respaldan automáticamente en `workspace/invodex_wa/`.
+- 🔐 **Autenticación Persistente**: Inicias sesión una sola vez con código QR; la sesión se cifra y guarda en `workspace/auth_wa/`.
 
-* 🧠 **Self-Correcting Cognitive Loop:** If a terminal command fails or a web extraction throws an error, OctoArch reads the `stderr` logs, enters *Fix Mode*, and autonomously retries the operation.
-* 🔌 **Universal MCP Support:** Built on an *Open Core* architecture. Hot-plug Python, Go, Node.js scripts, or databases to the cognitive engine. OctoArch reads your MCP server tools and decides when to use them.
-* 📱 **Headless WhatsApp Interface:** Includes a built-in `whatsapp-web.js` server. Send terminal commands, receive generated PDFs, or request deep web research directly to your phone.
-* 🛡️ **Secure Local Execution:** Strict Role-Based Access Control (RBAC) and Path Traversal prevention. The agent operates strictly within an isolated `/workspace` directory.
+## 🚀 Inicialización y Uso
 
----
+El servicio de WhatsApp está profundamente integrado en el ciclo de vida de OctoArch. **No necesitas iniciarlo por separado.**
 
-## 📦 Tech Stack & Core Dependencies
-
-OctoArch is built to be fast, modular, and reliable:
-* **`@google/generative-ai`**: Core cognitive engine (Gemini 2.5 Flash with native Function Calling).
-* **`@modelcontextprotocol/sdk`**: Standardized communication protocol for external tools.
-* **`whatsapp-web.js`**: Headless mobile communication bridge.
-* **`puppeteer`**: Web extraction and anti-bot evasion for deep research.
-* **`express` & `ws`**: Hybrid HTTP/WebSocket server for frontend integrations.
-
----
-
-## 🚀 Quick Start
-
-### Prerequisites
-* Node.js (v18 or higher)
-* A free API Key from [Google AI Studio](https://aistudio.google.com/)
-
-### Installation
-
-1. Clone this repository:
+1. **Arranca el Servidor Principal**:
+   Desde la raíz del proyecto OctoArch, ejecuta:
    ```bash
-   git clone [https://github.com/danieldavidkaka-dot/octoarch.git](https://github.com/danieldavidkaka-dot/octoarch.git)
-   cd octoarch
-Install dependencies:
+   npm run dev
+Escanea el Código QR:
+En tu terminal aparecerá un código QR. Abre WhatsApp en tu celular > Ajustes > Dispositivos vinculados > Vincular un dispositivo, y escanea la pantalla.
 
-Bash
-npm install
-Setup your environment:
-Rename the .env.example file to .env and inject your Gemini API Key:
+¡Listo! Verás en consola ✅ ¡CONECTADO! Octoarch v4.0 ya tiene WhatsApp y está pensando.
 
-Fragmento de código
-PORT=18789
-NODE_ENV=development
-GEMINI_API_KEY=your_api_key_here
-Ignite the engine!
+💬 Comandos y Sintaxis
+El agente reacciona automáticamente a mensajes enviados a su chat:
 
-Bash
-npm run dev
-On first boot, a QR code will appear in your terminal. Scan it with WhatsApp to link the agent.
+Modo Zero-Friction (Recomendado para PYMES):
 
-🛠️ Routing Architecture (Roles)
-OctoArch uses a dynamic intent detection system. Send commands from your CLI or WhatsApp using the following structure:
+Envía una foto (Ej. Factura). El sistema asume INVODEX automáticamente.
 
-octo [ROLE] [INSTRUCTION]
+Comando de Diagnóstico:
 
-Usage Examples:
-Development / DevOps (Root):
+!ping -> Retorna el estado del servidor.
 
-octo dev check our node version and create a test.txt file in the workspace.
+Comando Multi-Agente:
 
-Deep Web Research:
+octo chat ¿Qué puedes hacer? -> Modo conversacional seguro.
 
-octo research investigate example.com pages. Tell me what it's about and summarize.
+octo dev revisa la carpeta src -> Modo Desarrollador (Acceso a terminal y archivos).
 
-Casual Chat (With Active Memory):
+octo research investiga el clima local -> Modo Investigador (Acceso a Puppeteer).
 
-octo chat do you remember the name of the file we just created?
+octo [cualquier orden] -> Modo Automático. El sistema deducirá el mejor rol.
 
-Auto Mode:
+📂 Arquitectura del Módulo
+El servicio ya no vive en una carpeta aislada, forma parte del núcleo de herramientas:
 
-octo analyze this text... (If no role is specified, the system auto-assigns the best context).
+Plaintext
+octoarch_core/
+├── src/
+│   ├── tools/
+│   │   └── whatsapp.ts        # 📱 Motor de WhatsApp Web JS y Enrutador
+│   ├── core/
+│   │   └── llm.ts             # 🧠 Cerebro cognitivo que procesa los mensajes
+│   └── index.ts               # 🚀 Orquestador que inicializa el servicio
+├── workspace/
+│   ├── auth_wa/               # 🔐 Archivos de sesión de WhatsApp (¡Ignorado en Git!)
+│   └── invodex_wa/            # 💾 JSONs de facturas auto-guardados
+🛠️ Notas de Seguridad
+Restricción de Origen: Actualmente, el código está configurado con if (!msg.fromMe) return; para que solo responda a mensajes enviados por ti mismo (ideal para testing y uso personal). Para habilitarlo como servicio al cliente, comenta esa línea con precaución.
 
-🤝 Roadmap & Contributions
-This core is 100% Open Source. Our goal is for the community to expand OctoArch's horizons by building new MCP servers (e.g., Home Automation, ERP databases, Spotify, Notion).
-
-If you are interested in building an MCP connector or improving the cognitive engine, please read our CONTRIBUTING.md file.
-
-📄 License
-This project is licensed under the MIT License. See the LICENSE file for details.
+Privacidad: Las imágenes enviadas se procesan en base64 en memoria y se envían a Gemini. Asegúrate de cumplir con tus políticas de privacidad de datos corporativos.
