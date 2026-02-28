@@ -8,6 +8,9 @@ export class BrowserTool {
     // 🛡️ GESTIÓN DE MEMORIA: Temporizador para cerrar el navegador si no se usa
     private static idleTimeout: NodeJS.Timeout | null = null;
     private static readonly IDLE_TIME_MS = 5 * 60 * 1000; // 5 minutos de inactividad
+    
+    // 🛡️ NUEVO: Contador para evitar cierres abruptos si hay pestañas activas
+    private static activePageCount: number = 0;
 
     // Método para obtener o encender el navegador maestro
     private static async getBrowser(): Promise<Browser> {
@@ -34,15 +37,19 @@ export class BrowserTool {
         return this.browserInstance;
     }
 
-    // 🛡️ Método para programar el apagado tras inactividad
+    // 🛡️ ACTUALIZADO: Método para programar el apagado SOLO si no hay pestañas activas
     private static scheduleIdleShutdown() {
         if (this.idleTimeout) {
             clearTimeout(this.idleTimeout);
         }
         
+        // Si hay pestañas trabajando, abortamos la orden de apagado
+        if (this.activePageCount > 0) return;
+
         this.idleTimeout = setTimeout(async () => {
-            if (this.browserInstance) {
-                Logger.info('💤 Inactividad web detectada (5 min). Apagando Puppeteer para liberar RAM...');
+            // Doble verificación por seguridad
+            if (this.browserInstance && this.activePageCount === 0) {
+                Logger.info('💤 Inactividad web detectada (5 min sin pestañas). Apagando Puppeteer para liberar RAM...');
                 try {
                     await this.browserInstance.close();
                 } catch (e) {
@@ -57,6 +64,7 @@ export class BrowserTool {
 
     static async inspect(url: string): Promise<string> {
         Logger.info(`🌎 Navegando a: ${url}`);
+        this.activePageCount++; // 🛡️ Sumamos una página activa
         let page;
         
         try {
@@ -94,9 +102,6 @@ export class BrowserTool {
             // Extraer texto limpio (inner Text es más eficiente que HTML)
             const bodyHTML = await page.evaluate(() => document.body.innerText);
             
-            // ❌ IMPORTANTE: Cerramos solo la pestaña, NO el navegador
-            await page.close();
-
             const report = [
                 `--- REPORTE DE INSPECCIÓN (${url}) ---`,
                 // Limitamos los logs de consola para no contaminar la memoria de la IA
@@ -105,19 +110,17 @@ export class BrowserTool {
                 `📄 CONTENIDO VISIBLE:\n${bodyHTML.substring(0, 8000)}... (truncado por memoria)`
             ].join('\n\n');
 
-            // 🛡️ Al terminar la tarea, activamos la cuenta regresiva de apagado
-            this.scheduleIdleShutdown();
-
             return report;
 
         } catch (error: any) {
-            // Si algo falla, intentamos cerrar la pestaña huérfana para no tener fugas de RAM
-            if (page) await page.close().catch(() => {});
-            
-            // 🛡️ Incluso si falla, activamos la cuenta regresiva
-            this.scheduleIdleShutdown();
-            
             return `❌ Error navegando: ${error.message}`;
+        } finally {
+            // 🛡️ Siempre cerramos la pestaña y restamos del contador, sin importar si hubo error o no
+            if (page) {
+                await page.close().catch(() => {});
+            }
+            this.activePageCount--;
+            this.scheduleIdleShutdown(); // Solo iniciará si activePageCount llega a 0
         }
     }
 }

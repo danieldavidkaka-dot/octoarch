@@ -23,17 +23,39 @@ export class Logger {
         }
     }
 
+    // 🛡️ NUEVO: Filtro de sanitización global para evitar fuga de credenciales
+    private static sanitize(input: string): string {
+        if (!input || typeof input !== 'string') return input;
+        // Las API Keys de Google Gemini siempre empiezan con "AIza" y tienen 39 caracteres
+        return input.replace(/(AIza)[a-zA-Z0-9_-]{35}/g, '$1****REDACTED****');
+    }
+
     private static write(level: 'INFO' | 'WARN' | 'ERROR', message: string, data?: any) {
         this.ensureDir();
         const timestamp = new Date().toISOString().substring(11, 19); // HH:MM:SS
         
-        // 1. Salida Consola (Bonita)
-        const color = COLORS[level];
-        const dataStr = data ? `\n${JSON.stringify(data, null, 2)}` : '';
-        console.log(`${color}[${timestamp}] ${level}:${COLORS.RESET} ${message}${dataStr}`);
+        // 🛡️ SANITIZAR TEXTOS ANTES DE IMPRIMIR O GUARDAR
+        const safeMessage = this.sanitize(message);
+        
+        let safeDataConsole = '';
+        let safeDataFile = '';
 
-        // 2. Salida Archivo (Persistente)
-        const logLine = `[${new Date().toISOString()}] [${level}] ${message} ${data ? JSON.stringify(data) : ''}\n`;
+        if (data !== undefined) {
+            // Formato bonito para consola (con saltos de línea)
+            const rawDataConsole = typeof data === 'string' ? data : JSON.stringify(data, null, 2);
+            safeDataConsole = `\n${this.sanitize(rawDataConsole)}`;
+            
+            // Formato compacto para archivo (una sola línea)
+            const rawDataFile = typeof data === 'string' ? data : JSON.stringify(data);
+            safeDataFile = ` ${this.sanitize(rawDataFile)}`;
+        }
+
+        // 1. Salida Consola (Bonita y Segura)
+        const color = COLORS[level];
+        console.log(`${color}[${timestamp}] ${level}:${COLORS.RESET} ${safeMessage}${safeDataConsole}`);
+
+        // 2. Salida Archivo (Persistente y Segura)
+        const logLine = `[${new Date().toISOString()}] [${level}] ${safeMessage}${safeDataFile}\n`;
         try {
             fs.appendFileSync(this.getLogFileName(), logLine);
         } catch (e) {

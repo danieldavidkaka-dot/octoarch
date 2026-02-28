@@ -13,7 +13,9 @@ export async function runDiagnosis() {
         Logger.error('❌ GEMINI_API_KEY no válida o faltante en .env');
         hasError = true;
     } else {
-        console.log('✅ API Key configurada.');
+        // 🛡️ SEGURIDAD: Mostramos solo los últimos 4 dígitos para confirmar carga exitosa
+        const maskedKey = env.GEMINI_API_KEY.slice(-4);
+        console.log(`✅ API Key configurada (termina en: ****${maskedKey}).`);
     }
 
     // 2. Chequeo de Workspace

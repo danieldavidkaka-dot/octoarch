@@ -4,10 +4,10 @@ import { PATHS } from '../config/paths';
 import { Logger } from '../utils/logger';
 
 // 🔒 LA JAULA DE SEGURIDAD (ALLOWLIST STRICTA)
+// 🛡️ Fix: Eliminamos type, dir, ls, y echo para evitar exfiltración de datos.
 const ALLOWED_COMMANDS = new Set([
     'npm', 'node', 'npx', 
-    'ls', 'dir', 'echo', 
-    'mkdir', 'cd', 'git', 'tsc', 'type'
+    'mkdir', 'cd', 'git', 'tsc'
 ]);
 
 export const ShellTool = {
@@ -19,10 +19,11 @@ export const ShellTool = {
         // 1. Validación de Seguridad
         if (!ALLOWED_COMMANDS.has(program)) {
             Logger.warn(`🛡️ Comando bloqueado: ${program}`);
-            return `⛔ SEGURIDAD: El comando '${program}' no está permitido. Solo uso interno.`;
+            return `⛔ SEGURIDAD: El comando '${program}' no está permitido por riesgo de exfiltración. Si necesitas leer un archivo, usa la herramienta 'readFile'.`;
         }
 
-        Logger.info(`💻 [SHELL] Ejecutando: "${cleanCommand}"`);
+        // 🛡️ Auditoría de Seguridad (Queda guardado en los logs qué hizo y quién)
+        Logger.info(`💻 [AUDITORÍA SHELL] Ejecutando comando seguro: "${cleanCommand}"`);
 
         return new Promise((resolve) => {
             // 2. Configuración de Ejecución con TIMEOUT

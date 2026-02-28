@@ -102,11 +102,27 @@ export class MCPManager {
 
         Logger.info(`⚡ Ejecutando MCP Tool [${toolName}] en servidor [${serverName}]...`);
         
-        // 🛡️ Eliminamos "as any" y validamos con Zod
-        const rawResult = await client.callTool({
+        // 🛡️ Implementación de Timeout (Circuit Breaker)
+        const callPromise = client.callTool({
             name: toolName,
             arguments: args
-        }); 
+        });
+
+        // Cronómetro de autodestrucción: 30 segundos
+        const timeoutPromise = new Promise<never>((_, reject) => {
+            setTimeout(() => {
+                reject(new Error(`[TIMEOUT] La herramienta MCP '${toolName}' no respondió en 30 segundos.`));
+            }, 30000);
+        });
+
+        let rawResult;
+        try {
+            // Promise.race ejecuta ambas. Si el timeout termina antes, lanza el error y aborta el bloqueo.
+            rawResult = await Promise.race([callPromise, timeoutPromise]);
+        } catch (error: any) {
+            Logger.error(`❌ Error o Timeout ejecutando MCP:`, error);
+            return `❌ [ERROR MCP]: ${error.message || 'Fallo de conexión.'} El sistema abortó la operación para evitar el congelamiento de OctoArch. Reintenta más tarde.`;
+        }
 
         const parsedResult = McpToolResultSchema.safeParse(rawResult);
         

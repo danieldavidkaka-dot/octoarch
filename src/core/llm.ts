@@ -5,29 +5,45 @@ import { ConversationManager } from './conversation';
 import { Logger } from '../utils/logger';
 import { detectIntent, applyTemplate } from './library';
 import { octoTools } from './agent_tools';
-import { AgentExecutor } from './agent_executor';
 import { MCPManager } from './mcp_manager';
+import { ToolOrchestrator } from './tool_orchestrator'; // 🚀 NUEVO: Importamos el orquestador
+
+interface SessionData {
+    manager: ConversationManager;
+    lastActive: number;
+}
 
 export class IntelligenceCore {
-    // 🛡️ Lógica Singleton implementada de forma nativa
     private static instance: IntelligenceCore | null = null;
     
     private genAI: GoogleGenerativeAI;
-    // 🛡️ Mapa para aislar la memoria de cada usuario/chat (llave: sessionId)
-    private sessions: Map<string, ConversationManager>;
+    private sessions: Map<string, SessionData>;
+    
+    private readonly SESSION_TTL_MS = 24 * 60 * 60 * 1000;
+    private cachedModel: any = null;
+    private lastModelUpdate: number = 0;
 
     private constructor() {
-        this.sessions = new Map<string, ConversationManager>();
+        this.sessions = new Map<string, SessionData>();
         this.genAI = new GoogleGenerativeAI(env.GEMINI_API_KEY);
         Logger.info(`🧠 IntelligenceCore inicializado (Modular, Stateful & MCP Ready)`);
     }
 
-    // 🛡️ Método público para obtener la instancia única
     public static getInstance(): IntelligenceCore {
         if (!IntelligenceCore.instance) {
             IntelligenceCore.instance = new IntelligenceCore();
         }
         return IntelligenceCore.instance;
+    }
+
+    private cleanStaleSessions() {
+        const now = Date.now();
+        for (const [key, session] of this.sessions.entries()) {
+            if (now - session.lastActive > this.SESSION_TTL_MS) {
+                this.sessions.delete(key);
+                Logger.info(`🧹 [Garbage Collector] Sesión expirada limpiada de RAM: ${key}`);
+            }
+        }
     }
 
     private parseBase64Image(dataURI: string) {
@@ -37,10 +53,15 @@ export class IntelligenceCore {
     }
 
     private async getModel() {
+        const now = Date.now();
+        if (this.cachedModel && (now - this.lastModelUpdate < 5 * 60 * 1000)) {
+            return this.cachedModel; 
+        }
+
         const mcpTools = await MCPManager.getInstance().getDynamicGeminiTools();
         const allTools = [...octoTools, ...mcpTools];
 
-        return this.genAI.getGenerativeModel({
+        this.cachedModel = this.genAI.getGenerativeModel({
             model: "gemini-2.5-flash",
             tools: allTools,
             systemInstruction: `
@@ -51,6 +72,9 @@ export class IntelligenceCore {
             3. ANTI-ALUCINACIÓN: No inventes datos. Si una herramienta falla, infórmalo.
             `
         });
+        
+        this.lastModelUpdate = now;
+        return this.cachedModel;
     }
 
     private async generateWithRetry(request: any, retries = 3): Promise<any> {
@@ -61,8 +85,8 @@ export class IntelligenceCore {
             try {
                 return await model.generateContent(request);
             } catch (error: any) {
-                if (error.message?.includes('429') || error.message?.includes('Quota')) {
-                    Logger.warn(`Rate Limit. Esperando ${delay}ms...`);
+                if (error.message?.includes('429') || error.message?.includes('Quota') || error.message?.includes('503')) {
+                    Logger.warn(`Rate Limit o Servidor Ocupado. Esperando ${delay}ms...`);
                     await new Promise(resolve => setTimeout(resolve, delay));
                     delay *= 2;
                 } else {
@@ -70,25 +94,27 @@ export class IntelligenceCore {
                 }
             }
         }
-        throw new Error("❌ Se excedió el límite de reintentos.");
+        throw new Error("❌ Se excedió el límite de reintentos con la API de Gemini.");
     }
 
-    // 🛡️ ACTUALIZADO: Añadido sessionId para gestionar multi-usuario
     async generateResponse(sessionId: string, userPrompt: string, forcedIntent: string | null = null, imageBase64: string | null = null): Promise<string> {
         try {
-            // 🛡️ Aislamiento de sesión: Si el usuario es nuevo, creamos su propia memoria
+            this.cleanStaleSessions(); 
+
             if (!this.sessions.has(sessionId)) {
-                this.sessions.set(sessionId, new ConversationManager());
+                this.sessions.set(sessionId, { manager: new ConversationManager(), lastActive: Date.now() });
                 Logger.info(`🧠 Nueva sesión cognitiva creada para: ${sessionId}`);
             }
-            const activeConversation = this.sessions.get(sessionId)!;
+            
+            const sessionData = this.sessions.get(sessionId)!;
+            sessionData.lastActive = Date.now(); 
+            const activeConversation = sessionData.manager;
 
             const memory = await MemorySystem.recall();
             const intent = forcedIntent ? forcedIntent : detectIntent(userPrompt);
             const enrichedPrompt = applyTemplate(intent, userPrompt);
             const isInvoDex = intent.includes('INVODEX');
 
-            // --- NUEVO: SISTEMA DE COMPRESIÓN DE MEMORIA (ROLLING SUMMARY) ---
             if (!isInvoDex && activeConversation.needsCompression()) {
                 Logger.info(`🧠 Memoria a corto plazo llena [${sessionId}]. Iniciando compresión (Rolling Summary)...`);
                 const oldMessages = activeConversation.getMessagesToCompress().map(m => `${m.role}: ${m.content}`).join('\n');
@@ -102,7 +128,6 @@ export class IntelligenceCore {
                     activeConversation.applyCompression("Contexto previo omitido por límite de memoria.");
                 }
             }
-            // -----------------------------------------------------------------
             
             const contents: any[] = []; 
 
@@ -142,7 +167,7 @@ export class IntelligenceCore {
             }
 
             const result = await this.generateWithRetry({ contents });
-            const finalProcessedResponse = await this.processExecution(result, intent, forcedIntent);
+            const finalProcessedResponse = await this.processExecution(result, intent, forcedIntent, contents);
 
             if (!isInvoDex) {
                 activeConversation.add('model', finalProcessedResponse);
@@ -156,9 +181,9 @@ export class IntelligenceCore {
         }
     }
 
-    private async processExecution(result: any, intent: string, forcedIntent: string | null): Promise<string> {
+    // 🚀 ACTUALIZADO: Código súper limpio gracias a la delegación
+    private async processExecution(result: any, intent: string, forcedIntent: string | null, conversationContext: any[]): Promise<string> {
         let toolOutputs = ""; 
-        let extractedJson = ""; // 🛡️ NUEVA VARIABLE: Aquí atrapamos el JSON antes de que se le olvide
         
         try {
             const functionCalls = result.response.functionCalls();
@@ -166,46 +191,24 @@ export class IntelligenceCore {
                 return result.response.text();
             }
 
-            let operationsPerformed = false;
             const activeRole = forcedIntent || 'Auto';
+            
+            // 🛡️ Delegamos el trabajo pesado al nuevo Orquestador
+            const orchestratorResult = await ToolOrchestrator.executeTurn(functionCalls, activeRole);
+            toolOutputs = orchestratorResult.toolOutputs; // Actualizamos para usar en caso de fallback
 
-            for (const call of functionCalls) {
-                // 🛡️ CAPTURA DE MEMORIA: Si usó procesar_factura, guardamos sus argumentos
-                if (call.name === 'procesar_factura') {
-                    extractedJson = JSON.stringify(call.args, null, 2);
-                }
-
-                let executionResult = "";
-
-                executionResult = await AgentExecutor.execute(call.name, call.args, activeRole);
-                
-                if (executionResult.includes('Herramienta desconocida')) {
-                    try {
-                        const mcpResult = await MCPManager.getInstance().executeTool(call.name, call.args);
-                        executionResult = `\n--- RESULTADO MCP (${call.name}) ---\n${mcpResult}\n`;
-                    } catch (mcpError: any) {
-                        executionResult = `❌ [ERROR MCP en ${call.name}]: ${mcpError.message}\n`;
-                    }
-                }
-
-                toolOutputs += executionResult;
-                if (!executionResult.includes('[BLOCKED]') && !executionResult.includes('[ERROR')) {
-                    operationsPerformed = true;
-                }
-            }
-
-            if (operationsPerformed) {
+            if (orchestratorResult.operationsPerformed) {
                 Logger.info("🔄 Bucle Cognitivo iniciado...");
                 
-                // 🚀 OPTIMIZACIÓN INVODEX: Ensamblaje determinista (Evita una 2da llamada a la API)
                 if (activeRole === 'INVODEX' || intent.includes('INVODEX')) {
                     Logger.info("⚡ InvoDex: Respuesta ensamblada localmente (Bypass de LLM).");
-                    return `\`\`\`json\n${extractedJson}\n\`\`\`\n\n${toolOutputs.trim()}`;
+                    return `\`\`\`json\n${orchestratorResult.extractedJson}\n\`\`\`\n\n${toolOutputs.trim()}`;
                 }
 
-                // Bucle cognitivo normal para otros roles
                 let loopPrompt = `[RESULTADOS TÉCNICOS]\n${toolOutputs}\n\n[INSTRUCCIÓN]\nAnaliza los resultados técnicos de las herramientas que acabas de usar y formula la respuesta final para el usuario. No menciones el JSON.`;
-                const finalResponse = await this.generateWithRetry({ contents: [{ role: 'user', parts: [{ text: loopPrompt }] }] });
+                const loopContents = [...conversationContext, { role: 'user', parts: [{ text: loopPrompt }] }];
+                
+                const finalResponse = await this.generateWithRetry({ contents: loopContents });
                 return finalResponse.response.text();
             }
 
@@ -216,21 +219,18 @@ export class IntelligenceCore {
             
             try { 
                 const fallbackText = result.response.text(); 
-                if (fallbackText && fallbackText.trim() !== "") {
-                    return fallbackText;
-                }
+                if (fallbackText && fallbackText.trim() !== "") return fallbackText;
             } catch { /* Ignoramos si falla la extracción de texto */ }
             
             if (toolOutputs.trim() !== "") {
-                return `⚙️ **Ejecución Técnica (Fallback):**\n\n${toolOutputs}\n\n⚠️ *(El sistema completó la acción, pero hubo un corte de API al generar la respuesta humana).*`;
+                return `⚙️ **Ejecución Técnica (Fallback):**\n\n${toolOutputs}\n\n⚠️ *(El sistema completó la acción, pero hubo un corte de API al generar la respuesta).*`;
             }
 
             return "❌ Error procesando las herramientas.";
         }
     }
-} // 🛡️ LLAVE RESTAURADA AQUÍ
+} 
 
-// 🛡️ Exportación limpia
 export function getBrain(): IntelligenceCore {
     return IntelligenceCore.getInstance();
 }

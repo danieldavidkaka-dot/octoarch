@@ -21,11 +21,13 @@ export class FileTool {
         const workspacePath = path.resolve(PATHS.WORKSPACE);
         const fullPath = path.resolve(workspacePath, requestedPath);
         
-        // Anti-Path Traversal Matemático: Calculamos la ruta relativa
-        const relativePath = path.relative(workspacePath, fullPath);
-        
-        // Si la ruta relativa empieza con ".." (sube directorios) o apunta a otro disco, es un ataque.
-        if (relativePath.startsWith('..') || path.isAbsolute(relativePath)) {
+        // Anti-Path Traversal: Normalizar ambas rutas para comparación segura
+        const normalizedWorkspace = path.normalize(workspacePath).toLowerCase();
+        const normalizedFull = path.normalize(fullPath).toLowerCase();
+
+        // Verificación matemática: la ruta final DEBE empezar EXACTAMENTE con el workspace
+        if (!normalizedFull.startsWith(normalizedWorkspace + path.sep) &&
+            normalizedFull !== normalizedWorkspace) {
             throw new Error(`🚫 SEGURIDAD CRÍTICA: Intento de escape del workspace bloqueado: ${requestedPath}`);
         }
 
