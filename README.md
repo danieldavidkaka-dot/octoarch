@@ -6,65 +6,66 @@
 
 # 📱 OctoArch WhatsApp Interface
 
-El módulo de WhatsApp de OctoArch no es un simple bot transaccional. Es la puerta de enlace móvil al **Cognitive Runtime**, permitiéndote ejecutar flujos de trabajo complejos, administrar servidores (vía MCP) y procesar documentos directamente desde tu teléfono mediante la librería `whatsapp-web.js`.
+The OctoArch WhatsApp module is not a simple transactional bot. It is the mobile gateway to the **Cognitive Runtime**, allowing you to execute complex workflows, manage servers (via MCP), and process documents directly from your phone using the `whatsapp-web.js` library.
 
-## ✨ Características Principales
+## ✨ Key Features
 
-- 🧠 **Conexión Directa al Cognitive Core**: Cada número de teléfono mantiene una sesión aislada con memoria a corto plazo (Garbage Collector y TTL integrados).
-- 📸 **Flujo InvoDex Zero-Friction**: Envía la foto de una factura sin texto. El sistema auto-detectará la intención (`INVODEX`), extraerá los 9 campos fiscales, generará el JSON y lo inyectará en el ERP vía MCP.
-- 🔀 **Enrutamiento por Roles**: Usa prefijos como `octo dev`, `octo research` o `octo chat` para forzar a la IA a adoptar perfiles específicos con herramientas pre-asignadas.
-- 💾 **Auto-Guardado Local**: Los documentos procesados (como las facturas) se respaldan automáticamente en `workspace/invodex_wa/`.
-- 🔐 **Autenticación Persistente**: Inicias sesión una sola vez con código QR; la sesión se cifra y guarda en `workspace/auth_wa/`.
+- 🧠 **Direct Connection to the Cognitive Core**: Each phone number maintains an isolated session with short-term memory (Integrated Garbage Collector and TTL).
+- 📸 **InvoDex Zero-Friction Flow**: Send a photo of an invoice without text. The system will auto-detect the intent (`INVODEX`), extract the 9 tax fields, generate the JSON, and inject it into the ERP via MCP.
+- 🔀 **Role Routing**: Use prefixes like `octo dev`, `octo research`, or `octo chat` to force the AI to adopt specific profiles with pre-assigned tools.
+- 💾 **Local Auto-Save**: Processed documents (like invoices) are automatically backed up in `workspace/invodex_wa/`.
+- 🔐 **Persistent Authentication**: Log in only once with a QR code; the session is encrypted and saved in `workspace/auth_wa/`.
 
-## 🚀 Inicialización y Uso
+## 🚀 Initialization and Usage
 
-El servicio de WhatsApp está profundamente integrado en el ciclo de vida de OctoArch. **No necesitas iniciarlo por separado.**
+The WhatsApp service is deeply integrated into the OctoArch lifecycle. **You do not need to start it separately.**
 
-1. **Arranca el Servidor Principal**:
-   Desde la raíz del proyecto OctoArch, ejecuta:
+1. **Start the Main Server**:
+   From the root of the OctoArch project, run:
    ```bash
    npm run dev
-Escanea el Código QR:
-En tu terminal aparecerá un código QR. Abre WhatsApp en tu celular > Ajustes > Dispositivos vinculados > Vincular un dispositivo, y escanea la pantalla.
 
-¡Listo! Verás en consola ✅ ¡CONECTADO! Octoarch v4.0 ya tiene WhatsApp y está pensando.
+   Scan the QR Code:
+A QR code will appear in your terminal. Open WhatsApp on your phone > Settings > Linked devices > Link a device, and scan the screen.
 
-💬 Comandos y Sintaxis
-El agente reacciona automáticamente a mensajes enviados a su chat:
+Ready! You will see the following message in the console: ✅ ¡CONECTADO! Octoarch v4.0 ya tiene WhatsApp y está pensando.
 
-Modo Zero-Friction (Recomendado para PYMES):
+💬 Commands and Syntax
+The agent automatically reacts to messages sent to its chat:
 
-Envía una foto (Ej. Factura). El sistema asume INVODEX automáticamente.
+Zero-Friction Mode (Recommended for SMBs):
 
-Comando de Diagnóstico:
+Send a photo (e.g., Invoice). The system automatically assumes INVODEX.
 
-!ping -> Retorna el estado del servidor.
+Diagnostic Command:
 
-Comando Multi-Agente:
+!ping -> Returns the server status.
 
-octo chat ¿Qué puedes hacer? -> Modo conversacional seguro.
+Multi-Agent Command:
 
-octo dev revisa la carpeta src -> Modo Desarrollador (Acceso a terminal y archivos).
+octo chat What can you do? -> Safe conversational mode.
 
-octo research investiga el clima local -> Modo Investigador (Acceso a Puppeteer).
+octo dev check the src folder -> Developer Mode (Access to terminal and files).
 
-octo [cualquier orden] -> Modo Automático. El sistema deducirá el mejor rol.
+octo research investigate local weather -> Researcher Mode (Access to Puppeteer).
 
-📂 Arquitectura del Módulo
-El servicio ya no vive en una carpeta aislada, forma parte del núcleo de herramientas:
+octo [any prompt] -> Auto Mode. The system will deduce the best role.
 
-Plaintext
+📂 Module Architecture
+The service no longer lives in an isolated folder, it is part of the core tools:
+
 octoarch_core/
 ├── src/
 │   ├── tools/
-│   │   └── whatsapp.ts        # 📱 Motor de WhatsApp Web JS y Enrutador
+│   │   └── whatsapp.ts        # 📱 WhatsApp Web JS Engine and Router
 │   ├── core/
-│   │   └── llm.ts             # 🧠 Cerebro cognitivo que procesa los mensajes
-│   └── index.ts               # 🚀 Orquestador que inicializa el servicio
+│   │   └── llm.ts             # 🧠 Cognitive brain that processes messages
+│   └── index.ts               # 🚀 Orchestrator that initializes the service
 ├── workspace/
-│   ├── auth_wa/               # 🔐 Archivos de sesión de WhatsApp (¡Ignorado en Git!)
-│   └── invodex_wa/            # 💾 JSONs de facturas auto-guardados
-🛠️ Notas de Seguridad
-Restricción de Origen: Actualmente, el código está configurado con if (!msg.fromMe) return; para que solo responda a mensajes enviados por ti mismo (ideal para testing y uso personal). Para habilitarlo como servicio al cliente, comenta esa línea con precaución.
+│   ├── auth_wa/               # 🔐 WhatsApp session files (Ignored in Git!)
+│   └── invodex_wa/            # 💾 Auto-saved invoice JSONs
 
-Privacidad: Las imágenes enviadas se procesan en base64 en memoria y se envían a Gemini. Asegúrate de cumplir con tus políticas de privacidad de datos corporativos.
+🛠️ Security Notes
+Origin Restriction: Currently, the code is configured with if (!msg.fromMe) return; so that it only responds to messages sent by yourself (ideal for testing and personal use). To enable it as a customer service tool, comment out that line with caution.
+
+Privacy: Sent images are processed in base64 in memory and sent to Gemini. Ensure you comply with your corporate data privacy policies.
