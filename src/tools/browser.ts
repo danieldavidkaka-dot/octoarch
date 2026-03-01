@@ -1,5 +1,10 @@
-import puppeteer, { Browser, type ConsoleMessage, type HTTPResponse } from 'puppeteer';
+import { Browser, type ConsoleMessage, type HTTPResponse } from 'puppeteer';
+import puppeteer from 'puppeteer-extra';
+import StealthPlugin from 'puppeteer-extra-plugin-stealth';
 import { Logger } from '../utils/logger';
+
+// 🥷 INYECCIÓN DEL FANTASMA: Aplicamos el plugin a la instancia global
+puppeteer.use(StealthPlugin());
 
 export class BrowserTool {
     // 🏆 SINGLETON: La instancia maestra del navegador
@@ -15,7 +20,7 @@ export class BrowserTool {
     // Método para obtener o encender el navegador maestro
     private static async getBrowser(): Promise<Browser> {
         if (!this.browserInstance) {
-            Logger.info('🌐 Iniciando Browser Pool (Puppeteer Maestro en segundo plano)...');
+            Logger.info('🌐 Iniciando Browser Pool (Puppeteer Maestro con Stealth Mode)...');
             this.browserInstance = await puppeteer.launch({ 
                 headless: true, 
                 args: [
@@ -23,7 +28,9 @@ export class BrowserTool {
                     '--disable-setuid-sandbox',
                     '--disable-dev-shm-usage', 
                     '--disable-accelerated-2d-canvas',
-                    '--disable-gpu'
+                    '--disable-gpu',
+                    // 🛡️ EVASIÓN EXTRA: Oculta señales automatizadas adicionales
+                    '--disable-blink-features=AutomationControlled'
                 ] 
             });
         }
@@ -63,7 +70,7 @@ export class BrowserTool {
     }
 
     static async inspect(url: string): Promise<string> {
-        Logger.info(`🌎 Navegando a: ${url}`);
+        Logger.info(`🌎 Navegando en Modo Stealth a: ${url}`);
         this.activePageCount++; // 🛡️ Sumamos una página activa
         let page;
         
@@ -74,7 +81,8 @@ export class BrowserTool {
             // Solo abrimos una pestaña nueva (súper rápido)
             page = await browser.newPage();
             
-            // 🕵️ EVASIÓN: Disfrazamos a Puppeteer como un navegador real para pasar bloqueos Anti-Bot
+            // 🕵️ EVASIÓN ADICIONAL: Idioma y User-Agent ultra realista
+            await page.setExtraHTTPHeaders({ 'Accept-Language': 'es-ES,es;q=0.9,en;q=0.8' });
             await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36');
             
             const consoleLogs: string[] = [];
@@ -94,16 +102,17 @@ export class BrowserTool {
                 }
             });
 
-            // 🚀 CORRECCIÓN DE RENDIMIENTO: 
-            // - 'domcontentloaded': Obtiene el texto y no espera a los anuncios.
-            // - timeout 45000: Le da tiempo suficiente para pasar validaciones Cloudflare.
-            await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 45000 });
+            // 🚀 CORRECCIÓN VITAL PARA CAPTCHAS: 
+            // Cambiamos 'domcontentloaded' por 'networkidle2'. 
+            // Los desafíos de Cloudflare tardan ~5 segundos en resolverse por JavaScript. 
+            // Si leemos muy rápido, solo capturaremos el HTML del Captcha. 'networkidle2' espera a que la red se calme.
+            await page.goto(url, { waitUntil: 'networkidle2', timeout: 45000 });
             
             // Extraer texto limpio (inner Text es más eficiente que HTML)
             const bodyHTML = await page.evaluate(() => document.body.innerText);
             
             const report = [
-                `--- REPORTE DE INSPECCIÓN (${url}) ---`,
+                `--- REPORTE DE INSPECCIÓN STEALTH (${url}) ---`,
                 // Limitamos los logs de consola para no contaminar la memoria de la IA
                 consoleLogs.length > 0 ? `🔥 LOGS DE RED:\n${consoleLogs.join('\n').substring(0, 500)}` : "✅ Consola limpia.",
                 // 🧠 MEMORIA AMPLIADA: Le damos hasta 8000 caracteres para leer noticias reales

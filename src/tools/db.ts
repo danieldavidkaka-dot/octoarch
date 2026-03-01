@@ -1,12 +1,7 @@
-// Simplificado para el ejemplo
-import { exec } from 'child_process';
-
 export class DatabaseTool {
-    static async query(sql: string) {
-        // Octoarch ejecuta la query para VER si los datos se guardaron
-        // Esto cierra el ciclo de pruebas Fullstack.
-        return new Promise((resolve) => {
-             // Lógica para ejecutar SQL contra tu DB local
-        });
+    static async query(sql: string): Promise<any> {
+        // 🛡️ PARCHE APLICADO: Evita la Promesa Zombi que colgaba el servidor
+        // Lanzamos un error claro para que el LLM sepa que debe usar otra vía por ahora.
+        throw new Error("DatabaseTool no implementado. Usa el MCP Server de InvoDex.");
     }
 }

@@ -6,7 +6,7 @@ import { Logger } from '../utils/logger';
 import { octoTools } from './agent_tools';
 import { MCPManager } from './mcp_manager';
 import { ToolOrchestrator } from './tool_orchestrator';
-import { PromptManager } from './prompt_manager'; // 🚀 NUEVO: Gestor centralizado de prompts
+import { PromptManager } from './prompt_manager';
 
 interface SessionData {
     manager: ConversationManager;
@@ -113,7 +113,6 @@ export class IntelligenceCore {
 
             const memory = await MemorySystem.recall();
             
-            // 🚀 LIMPIEZA: Definimos el rol de forma pura, sin Regex obsoletos
             const activeMode = forcedIntent || 'AUTO';
             const isInvoDex = activeMode === 'INVODEX';
 
@@ -154,7 +153,6 @@ export class IntelligenceCore {
                 Logger.info(`Modo: INVODEX (Zero-Friction) | Sesión: ${sessionId}`);
             }
 
-            // 🚀 CONSTRUCCIÓN DEL PROMPT: Usando el nuevo PromptManager
             const currentTurnText = PromptManager.buildTurnPrompt(activeMode, memory, userPrompt, !!imageBase64);
             const currentParts: any[] = [{ text: currentTurnText }];
             
@@ -171,7 +169,6 @@ export class IntelligenceCore {
 
             const result = await this.generateWithRetry({ contents });
             
-            // Pasamos 'activeMode' en lugar de múltiples variables intent
             const finalProcessedResponse = await this.processExecution(result, activeMode, contents);
 
             if (!isInvoDex) {
@@ -181,8 +178,10 @@ export class IntelligenceCore {
             return finalProcessedResponse;
 
         } catch (error: any) {
-            Logger.error(`❌ Error en Core [${sessionId}]:`, error);
-            return `❌ Error: ${error.message}`;
+            // 🛡️ PARCHE APLICADO: Normalización estricta del error
+            const errorMsg = error?.message || JSON.stringify(error) || "Error desconocido al procesar la respuesta.";
+            Logger.error(`❌ Error en Core [${sessionId}]: ${errorMsg}`);
+            return `❌ Error: ${errorMsg}`;
         }
     }
 
@@ -216,7 +215,9 @@ export class IntelligenceCore {
             return `**Octoarch (${activeMode}):**\nIntenté ejecutar herramientas pero fallaron.\n\n${toolOutputs}`;
 
         } catch (error: any) {
-            Logger.error("❌ Error en processExecution:", error);
+            // 🛡️ PARCHE APLICADO: Normalización estricta del error
+            const errorMsg = error?.message || JSON.stringify(error) || "Error desconocido en la ejecución de herramientas.";
+            Logger.error(`❌ Error en processExecution: ${errorMsg}`);
             
             try { 
                 const fallbackText = result.response.text(); 
@@ -227,7 +228,7 @@ export class IntelligenceCore {
                 return `⚙️ **Ejecución Técnica (Fallback):**\n\n${toolOutputs}\n\n⚠️ *(El sistema completó la acción, pero hubo un corte de API al generar la respuesta).*`;
             }
 
-            return "❌ Error procesando las herramientas.";
+            return `❌ Error procesando las herramientas: ${errorMsg}`;
         }
     }
 } 
