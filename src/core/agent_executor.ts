@@ -1,5 +1,6 @@
 import { FileTool } from '../tools/files';
 import { ShellTool } from '../tools/shell';
+import { BrowserTool } from '../tools/browser'; // 🚀 NUEVO: Importación estática y limpia
 import { Logger } from '../utils/logger';
 
 export class AgentExecutor {
@@ -7,21 +8,24 @@ export class AgentExecutor {
         let isAllowed = true;
         let denyReason = "";
 
+        // Normalizamos el rol a mayúsculas por seguridad
+        const role = activeRole.toUpperCase();
+
         // 🛡️ Validación Estricta de RBAC (Role-Based Access Control)
-        if (activeRole === 'CHAT') {
+        if (role === 'CHAT') {
             if (['executeCommand', 'createFile', 'readFile', 'inspectWeb'].includes(opName)) {
                 isAllowed = false;
                 denyReason = "Modo Seguro (Chat) no permite herramientas.";
             }
         } 
-        // 🔒 Añadimos INVODEX aquí para blindar el procesamiento de facturas
-        else if ((activeRole === 'CFO_ADVISOR' || activeRole === 'RESEARCHER' || activeRole === 'INVODEX') && ['executeCommand', 'createFile'].includes(opName)) {
+        // 🔒 Sincronizado con los roles reales del PromptManager
+        else if (['CFO', 'CMO', 'RESEARCH', 'INVODEX'].includes(role) && ['executeCommand', 'createFile'].includes(opName)) {
             isAllowed = false;
-            denyReason = `El rol ${activeRole} es de procesamiento/lectura, no permite modificar el sistema base.`;
+            denyReason = `El rol ${role} es de procesamiento/lectura, no permite modificar el sistema base.`;
         }
 
         if (!isAllowed) {
-            Logger.warn(`🛡️ BLOCKED: ${opName} en modo ${activeRole}`);
+            Logger.warn(`🛡️ BLOCKED: ${opName} en modo ${role}`);
             return `❌ [BLOCKED]: Operación '${opName}' denegada (${denyReason}).`;
         }
 
@@ -40,7 +44,7 @@ export class AgentExecutor {
                 return `\n--- RESULTADO DE TERMINAL (${args.command}) ---\n${output.substring(0, 3000)}\n`;
             }
             if (opName === 'inspectWeb') {
-                const { BrowserTool } = require('../tools/browser');
+                // 🚀 Usando el BrowserTool de la importación superior
                 const report = await BrowserTool.inspect(args.url);
                 return `\n--- RESULTADO DE NAVEGADOR (${args.url}) ---\n${report}\n`;
             }

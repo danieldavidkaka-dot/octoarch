@@ -1,7 +1,7 @@
 import { Client, LocalAuth, Message } from 'whatsapp-web.js';
 import qrcode from 'qrcode-terminal';
-import fs from 'fs'; // 📁 Importamos File System
-import path from 'path'; // 🗺️ Importamos Path para las rutas
+import fs from 'fs'; 
+import path from 'path'; 
 import { Logger } from '../utils/logger';
 import { IntelligenceCore, getBrain } from '../core/llm'; 
 
@@ -10,20 +10,18 @@ export class WhatsAppService {
     private static isReady: boolean = false;
     private static brain: IntelligenceCore; 
 
-    // 🗺️ DICCIONARIO DE ROLES (Aliases para WhatsApp)
+    // 🗺️ DICCIONARIO DE ROLES (Sincronizado con PromptManager)
     private static roleMap: Record<string, string> = {
         'chat': 'CHAT',
         'seguro': 'CHAT',
         'dev': 'DEV',
         'root': 'DEV',
-        'research': 'RESEARCHER',
-        'web': 'RESEARCHER',
-        'cfo': 'CFO_ADVISOR',
-        'finanzas': 'CFO_ADVISOR',
-        'cmo': 'MARKETING_GURU',
-        'legal': 'LEGAL_DRAFT',
-        'copy': 'COPYWRITER',
-        'seo': 'SEO_AUDIT',
+        'research': 'RESEARCH',
+        'web': 'RESEARCH',
+        'cfo': 'CFO',
+        'finanzas': 'CFO',
+        'cmo': 'CMO',
+        'marketing': 'CMO',
         'invodex': 'INVODEX',
         'factura': 'INVODEX'
     };
@@ -71,7 +69,7 @@ export class WhatsAppService {
         });
 
         this.client.on('ready', () => {
-            Logger.info("✅ ¡CONECTADO! Octoarch v4.0 ya tiene WhatsApp y está pensando.");
+            Logger.info("✅ ¡CONECTADO! Octoarch v4.2 ya tiene WhatsApp y está pensando.");
             this.isReady = true;
         });
 
@@ -84,7 +82,7 @@ export class WhatsAppService {
             if (!msg.body && !msg.hasMedia) return;
 
             if (msg.body === '!ping') {
-                await msg.reply('🐙 Octoarch v4.0 Online, Ready & Seeing.');
+                await msg.reply('🐙 OctoArch v4.2 Online, Secure & Seeing.');
                 return;
             }
 
@@ -110,12 +108,10 @@ export class WhatsAppService {
                             Logger.info(`🔎 [WhatsApp] Modo detectado: AUTO (Sin restricciones)`);
                         }
                     } else if (isDirectImage) {
-                        // Si mandan una foto sin comando, asumimos que es una factura
                         forcedIntent = 'INVODEX';
                         Logger.info(`🔎 [WhatsApp] Imagen sin comando. Auto-asignando modo: INVODEX`);
                     }
 
-                    // 🛡️ Si la query quedó vacía pero hay imagen, inyectamos la orden base
                     if (finalQuery.trim() === "" && msg.hasMedia) {
                         finalQuery = "Por favor, analiza la imagen adjunta y extrae la información requerida.";
                     }
@@ -130,11 +126,27 @@ export class WhatsAppService {
                         Logger.info("📥 Descargando imagen adjunta desde WhatsApp...");
                         const media = await msg.downloadMedia();
                         
-                        if (media && media.mimetype.startsWith('image/')) {
-                            imageBase64 = `data:${media.mimetype};base64,${media.data}`;
-                            Logger.info(`📸 Imagen procesada correctamente. Tipo: ${media.mimetype}`);
-                        } else {
-                            Logger.warn("⚠️ El archivo adjunto no es una imagen soportada.");
+                        if (media && media.data) {
+                            try {
+                                // 🛡️ ANÁLISIS FORENSE DE ARCHIVOS (Magic Numbers)
+                                const buffer = Buffer.from(media.data, 'base64');
+                                
+                                // Importación dinámica para evitar problemas ESM/CJS en Node.js
+                                const { fileTypeFromBuffer } = await import('file-type');
+                                const type = await fileTypeFromBuffer(buffer);
+
+                                if (type && type.mime.startsWith('image/')) {
+                                    imageBase64 = `data:${type.mime};base64,${media.data}`;
+                                    Logger.info(`📸 Imagen verificada a nivel de bytes. Tipo real: ${type.mime}`);
+                                } else {
+                                    Logger.warn(`🛡️ [ALERTA DE SEGURIDAD] Archivo bloqueado. Falso mimetype detectado. Tipo reportado: ${media.mimetype}, Tipo real: ${type ? type.mime : 'Desconocido'}`);
+                                    await msg.reply("🛡️ Archivo rechazado. Nuestro escáner de seguridad determinó que el archivo no es una imagen válida.");
+                                    return; // 🚫 Aborta la ejecución
+                                }
+                            } catch (secError) {
+                                Logger.error("❌ Error verificando el archivo adjunto:", secError);
+                                return;
+                            }
                         }
                     }
 
