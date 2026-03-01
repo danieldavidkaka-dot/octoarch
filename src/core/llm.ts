@@ -3,10 +3,10 @@ import { env } from '../config/env';
 import { MemorySystem } from './memory';
 import { ConversationManager } from './conversation';
 import { Logger } from '../utils/logger';
-import { detectIntent, applyTemplate } from './library';
 import { octoTools } from './agent_tools';
 import { MCPManager } from './mcp_manager';
-import { ToolOrchestrator } from './tool_orchestrator'; // 🚀 NUEVO: Importamos el orquestador
+import { ToolOrchestrator } from './tool_orchestrator';
+import { PromptManager } from './prompt_manager'; // 🚀 NUEVO: Gestor centralizado de prompts
 
 interface SessionData {
     manager: ConversationManager;
@@ -26,7 +26,7 @@ export class IntelligenceCore {
     private constructor() {
         this.sessions = new Map<string, SessionData>();
         this.genAI = new GoogleGenerativeAI(env.GEMINI_API_KEY);
-        Logger.info(`🧠 IntelligenceCore inicializado (Modular, Stateful & MCP Ready)`);
+        Logger.info(`🧠 IntelligenceCore inicializado (Arquitectura Limpia & Function Calling Nativo)`);
     }
 
     public static getInstance(): IntelligenceCore {
@@ -61,16 +61,17 @@ export class IntelligenceCore {
         const mcpTools = await MCPManager.getInstance().getDynamicGeminiTools();
         const allTools = [...octoTools, ...mcpTools];
 
+        // 🛡️ FASE 0: Modelo oficial y estable (gemini-2.5-flash) + Instrucción centralizada
         this.cachedModel = this.genAI.getGenerativeModel({
             model: "gemini-2.5-flash",
             tools: allTools,
-            systemInstruction: `
-            ERES OCTOARCH V4.2 - THE COGNITIVE RUNTIME.
-            
-            1. REGLA DE IDIOMA: Responde y PIENSA ('thought') en el idioma del usuario.
-            2. REGLA DE NAVEGACIÓN: Usa 'inspectWeb'. PROHIBIDO usar 'executeCommand' para ver webs.
-            3. ANTI-ALUCINACIÓN: No inventes datos. Si una herramienta falla, infórmalo.
-            `
+            systemInstruction: PromptManager.getSystemInstruction(),
+            // 🧊 PARCHE ANTI-ALUCINACIÓN
+            generationConfig: {
+                temperature: 0.1, // Casi cero creatividad. Respuestas analíticas y predecibles.
+                topK: 32,         // Limita las palabras "raras" o fuera de contexto
+                topP: 0.8         // Fomenta respuestas más directas
+            }
         });
         
         this.lastModelUpdate = now;
@@ -111,14 +112,15 @@ export class IntelligenceCore {
             const activeConversation = sessionData.manager;
 
             const memory = await MemorySystem.recall();
-            const intent = forcedIntent ? forcedIntent : detectIntent(userPrompt);
-            const enrichedPrompt = applyTemplate(intent, userPrompt);
-            const isInvoDex = intent.includes('INVODEX');
+            
+            // 🚀 LIMPIEZA: Definimos el rol de forma pura, sin Regex obsoletos
+            const activeMode = forcedIntent || 'AUTO';
+            const isInvoDex = activeMode === 'INVODEX';
 
             if (!isInvoDex && activeConversation.needsCompression()) {
-                Logger.info(`🧠 Memoria a corto plazo llena [${sessionId}]. Iniciando compresión (Rolling Summary)...`);
+                Logger.info(`🧠 Memoria a corto plazo llena [${sessionId}]. Iniciando compresión...`);
                 const oldMessages = activeConversation.getMessagesToCompress().map(m => `${m.role}: ${m.content}`).join('\n');
-                const summaryPrompt = `Resume brevemente los siguientes mensajes de nuestra conversación pasada. Mantén los datos clave, rutas de archivos o variables mencionadas. No respondas a los mensajes, solo resúmelos:\n\n${oldMessages}`;
+                const summaryPrompt = `Resume brevemente esta conversación pasada. Mantén datos clave. No respondas a los mensajes, solo resúmelos:\n\n${oldMessages}`;
                 
                 try {
                     const summaryResult = await this.generateWithRetry({ contents: [{ role: 'user', parts: [{ text: summaryPrompt }] }] });
@@ -147,12 +149,13 @@ export class IntelligenceCore {
                         lastRole = role;
                     }
                 }
-                Logger.info(`Intención: ${intent} | Modo: Stateful Nativo | Sesión: ${sessionId}`);
+                Logger.info(`Modo: ${activeMode} | Sesión: ${sessionId}`);
             } else {
-                Logger.info(`Intención: ${intent} | Modo: Stateless | Sesión: ${sessionId}`);
+                Logger.info(`Modo: INVODEX (Zero-Friction) | Sesión: ${sessionId}`);
             }
 
-            const currentTurnText = `[ENTORNO]\nMemoria Global: ${memory}\n\n[INSTRUCCIÓN]\nActúas como: ${intent}\n${enrichedPrompt}`;
+            // 🚀 CONSTRUCCIÓN DEL PROMPT: Usando el nuevo PromptManager
+            const currentTurnText = PromptManager.buildTurnPrompt(activeMode, memory, userPrompt, !!imageBase64);
             const currentParts: any[] = [{ text: currentTurnText }];
             
             if (imageBase64) {
@@ -167,7 +170,9 @@ export class IntelligenceCore {
             }
 
             const result = await this.generateWithRetry({ contents });
-            const finalProcessedResponse = await this.processExecution(result, intent, forcedIntent, contents);
+            
+            // Pasamos 'activeMode' en lugar de múltiples variables intent
+            const finalProcessedResponse = await this.processExecution(result, activeMode, contents);
 
             if (!isInvoDex) {
                 activeConversation.add('model', finalProcessedResponse);
@@ -181,8 +186,7 @@ export class IntelligenceCore {
         }
     }
 
-    // 🚀 ACTUALIZADO: Código súper limpio gracias a la delegación
-    private async processExecution(result: any, intent: string, forcedIntent: string | null, conversationContext: any[]): Promise<string> {
+    private async processExecution(result: any, activeMode: string, conversationContext: any[]): Promise<string> {
         let toolOutputs = ""; 
         
         try {
@@ -191,16 +195,13 @@ export class IntelligenceCore {
                 return result.response.text();
             }
 
-            const activeRole = forcedIntent || 'Auto';
-            
-            // 🛡️ Delegamos el trabajo pesado al nuevo Orquestador
-            const orchestratorResult = await ToolOrchestrator.executeTurn(functionCalls, activeRole);
-            toolOutputs = orchestratorResult.toolOutputs; // Actualizamos para usar en caso de fallback
+            const orchestratorResult = await ToolOrchestrator.executeTurn(functionCalls, activeMode);
+            toolOutputs = orchestratorResult.toolOutputs; 
 
             if (orchestratorResult.operationsPerformed) {
                 Logger.info("🔄 Bucle Cognitivo iniciado...");
                 
-                if (activeRole === 'INVODEX' || intent.includes('INVODEX')) {
+                if (activeMode === 'INVODEX') {
                     Logger.info("⚡ InvoDex: Respuesta ensamblada localmente (Bypass de LLM).");
                     return `\`\`\`json\n${orchestratorResult.extractedJson}\n\`\`\`\n\n${toolOutputs.trim()}`;
                 }
@@ -212,7 +213,7 @@ export class IntelligenceCore {
                 return finalResponse.response.text();
             }
 
-            return `**Octoarch (${intent}):**\nIntenté ejecutar herramientas pero fallaron.\n\n${toolOutputs}`;
+            return `**Octoarch (${activeMode}):**\nIntenté ejecutar herramientas pero fallaron.\n\n${toolOutputs}`;
 
         } catch (error: any) {
             Logger.error("❌ Error en processExecution:", error);

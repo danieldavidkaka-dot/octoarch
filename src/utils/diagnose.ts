@@ -1,11 +1,10 @@
-import { GoogleGenerativeAI } from '@google/generative-ai';
 import { env } from '../config/env';
 import { Logger } from './logger';
 import * as fs from 'fs';
 import * as path from 'path';
 
 export async function runDiagnosis() {
-    console.log('\n🏥 === DIAGNÓSTICO DE SISTEMA OCTOARCH v4.0 ===');
+    console.log('\n🏥 === DIAGNÓSTICO DE SISTEMA OCTOARCH v4.2 ===');
     let hasError = false;
 
     // 1. Chequeo de Entorno (.env)
@@ -45,16 +44,20 @@ export async function runDiagnosis() {
         Logger.warn('⚠️ No se pudo verificar la IP pública. Asegúrate de tener internet.');
     }
 
-    // 4. Prueba de Fuego con Gemini (Usando el SDK oficial)
+    // 4. Prueba de API Inteligente (Cero consumo de tokens)
     if (!hasError) {
         try {
-            console.log('🧠 Probando conexión con Gemini...');
-            const genAI = new GoogleGenerativeAI(env.GEMINI_API_KEY);
-            // Usamos gemini-1.5-flash para el ping porque es el más estable
-            const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+            console.log('🧠 Probando conexión con Google AI Studio...');
             
-            await model.generateContent("ping");
-            console.log('✅ Conexión con Google AI: ESTABLE.');
+            // Hacemos un fetch a la lista de modelos. Si responde 200, la API KEY y la conexión están perfectas.
+            const url = `https://generativelanguage.googleapis.com/v1beta/models?key=${env.GEMINI_API_KEY}`;
+            const response = await fetch(url, { signal: AbortSignal.timeout(5000) });
+            
+            if (response.ok) {
+                console.log('✅ Conexión con Google AI: ESTABLE Y VERIFICADA (Cero consumo).');
+            } else {
+                Logger.error(`❌ Error conectando a Google: HTTP ${response.status}`);
+            }
             
         } catch (e: any) {
             Logger.error(`❌ Error conectando a Google: ${e.message}`);
