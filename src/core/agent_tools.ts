@@ -49,6 +49,15 @@ export const octoTools: Tool[] = [{
                 },
                 required: ["url"]
             }
+        },
+        // 📧 NUEVA HERRAMIENTA: Lector de Gmail
+        {
+            name: "checkGmail",
+            description: "Revisa la bandeja de entrada de Gmail conectada buscando correos nuevos/no leídos que tengan archivos adjuntos (como facturas).",
+            parameters: {
+                type: SchemaType.OBJECT,
+                properties: {} // No requiere parámetros del usuario, lo hace automáticamente
+            }
         }
     ]
 }];

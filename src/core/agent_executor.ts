@@ -1,6 +1,7 @@
 import { FileTool } from '../tools/files';
 import { ShellTool } from '../tools/shell';
-import { BrowserTool } from '../tools/browser'; // 🚀 NUEVO: Importación estática y limpia
+import { BrowserTool } from '../tools/browser';
+import { GmailTool } from '../tools/gmail'; // 📧 NUEVO: Importación estática del lector de correos
 import { Logger } from '../utils/logger';
 
 export class AgentExecutor {
@@ -13,7 +14,8 @@ export class AgentExecutor {
 
         // 🛡️ Validación Estricta de RBAC (Role-Based Access Control)
         if (role === 'CHAT') {
-            if (['executeCommand', 'createFile', 'readFile', 'inspectWeb'].includes(opName)) {
+            // Se bloquea checkGmail en modo CHAT para mantenerlo puramente conversacional
+            if (['executeCommand', 'createFile', 'readFile', 'inspectWeb', 'checkGmail'].includes(opName)) {
                 isAllowed = false;
                 denyReason = "Modo Seguro (Chat) no permite herramientas.";
             }
@@ -44,9 +46,14 @@ export class AgentExecutor {
                 return `\n--- RESULTADO DE TERMINAL (${args.command}) ---\n${output.substring(0, 3000)}\n`;
             }
             if (opName === 'inspectWeb') {
-                // 🚀 Usando el BrowserTool de la importación superior
                 const report = await BrowserTool.inspect(args.url);
                 return `\n--- RESULTADO DE NAVEGADOR (${args.url}) ---\n${report}\n`;
+            }
+            // 📧 NUEVA CONEXIÓN: Ejecución de Gmail
+            if (opName === 'checkGmail') {
+                Logger.info(`🕵️‍♀️ Ejecutando herramienta de Gmail para el rol: ${role}`);
+                const report = await GmailTool.fetchUnreadInvoices();
+                return `\n--- RESULTADO DE GMAIL ---\n${report}\n`;
             }
             
             return `❌ Herramienta desconocida: ${opName}`;
