@@ -1,26 +1,22 @@
 import { FileTool } from '../tools/files';
 import { ShellTool } from '../tools/shell';
 import { BrowserTool } from '../tools/browser';
-import { GmailTool } from '../tools/gmail'; // 📧 NUEVO: Importación estática del lector de correos
+import { GmailTool } from '../tools/gmail'; 
+import { SkillLoader } from '../tools/skill_loader'; // 🧠 NUEVO: Importación del Loader
 import { Logger } from '../utils/logger';
 
 export class AgentExecutor {
     static async execute(opName: string, args: any, activeRole: string): Promise<string> {
         let isAllowed = true;
         let denyReason = "";
-
-        // Normalizamos el rol a mayúsculas por seguridad
         const role = activeRole.toUpperCase();
 
-        // 🛡️ Validación Estricta de RBAC (Role-Based Access Control)
         if (role === 'CHAT') {
-            // Se bloquea checkGmail en modo CHAT para mantenerlo puramente conversacional
-            if (['executeCommand', 'createFile', 'readFile', 'inspectWeb', 'checkGmail'].includes(opName)) {
+            if (['executeCommand', 'createFile', 'readFile', 'inspectWeb', 'checkGmail', 'loadSkill'].includes(opName)) {
                 isAllowed = false;
                 denyReason = "Modo Seguro (Chat) no permite herramientas.";
             }
         } 
-        // 🔒 Sincronizado con los roles reales del PromptManager
         else if (['CFO', 'CMO', 'RESEARCH', 'INVODEX'].includes(role) && ['executeCommand', 'createFile'].includes(opName)) {
             isAllowed = false;
             denyReason = `El rol ${role} es de procesamiento/lectura, no permite modificar el sistema base.`;
@@ -31,7 +27,6 @@ export class AgentExecutor {
             return `❌ [BLOCKED]: Operación '${opName}' denegada (${denyReason}).`;
         }
 
-        // ⚙️ Ejecución Directa
         try {
             if (opName === 'readFile') {
                 const content = await FileTool.readFile(args.path);
@@ -49,11 +44,15 @@ export class AgentExecutor {
                 const report = await BrowserTool.inspect(args.url);
                 return `\n--- RESULTADO DE NAVEGADOR (${args.url}) ---\n${report}\n`;
             }
-            // 📧 NUEVA CONEXIÓN: Ejecución de Gmail
             if (opName === 'checkGmail') {
                 Logger.info(`🕵️‍♀️ Ejecutando herramienta de Gmail para el rol: ${role}`);
                 const report = await GmailTool.fetchUnreadInvoices();
                 return `\n--- RESULTADO DE GMAIL ---\n${report}\n`;
+            }
+            // 🧠 NUEVA CONEXIÓN: Ejecución de Skills
+            if (opName === 'loadSkill') {
+                Logger.info(`🎮 Cargando Skill: ${args.skillName}`);
+                return await SkillLoader.load(args.skillName);
             }
             
             return `❌ Herramienta desconocida: ${opName}`;

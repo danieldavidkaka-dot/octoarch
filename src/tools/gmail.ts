@@ -2,6 +2,7 @@ import { google } from 'googleapis';
 import fs from 'fs';
 import path from 'path';
 import { Logger } from '../utils/logger';
+import { FileValidator } from '../utils/file_validator'; // 🛡️ ESCUDO IMPORTADO
 
 export class GmailTool {
     private static authClient: any = null;
@@ -76,10 +77,18 @@ export class GmailTool {
                             id: att.body!.attachmentId!
                         });
 
-                        // Convertimos de Base64 (formato web) a un archivo real
                         const buffer = Buffer.from(attachData.data.data!, 'base64');
+
+                        // 🛡️ VALIDACIÓN FORENSE DE BYTES
+                        const validation = await FileValidator.validateBuffer(buffer, att.filename!);
+
+                        if (!validation.isValid) {
+                            report += `🚨 [BLOQUEADO] El archivo '${att.filename}' no pasó los controles de seguridad (Tipo real: ${validation.mime}).\n`;
+                            continue; // Ignora el archivo y no lo guarda
+                        }
+
+                        // Si pasó el filtro, lo guardamos
                         const filePath = path.join(downloadFolder, att.filename!);
-                        
                         fs.writeFileSync(filePath, buffer);
                         
                         report += `✅ Adjunto descargado y guardado en: workspace/factura_correos/${att.filename}\n`;
@@ -88,7 +97,7 @@ export class GmailTool {
                     report += `⚠️ No se encontraron archivos adjuntos compatibles.\n`;
                 }
 
-                // 🛡️ MARCADO COMO LEÍDO: Descomentamos esto para que no lo vuelva a descargar en el futuro
+                // 🛡️ MARCADO COMO LEÍDO
                 await gmail.users.messages.modify({
                     userId: 'me',
                     id: msg.id!,

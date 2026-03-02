@@ -1,8 +1,5 @@
 import { SchemaType, Tool } from '@google/generative-ai';
 
-// ==========================================
-// 🛠️ DEFINICIÓN DE HERRAMIENTAS NATIVAS
-// ==========================================
 export const octoTools: Tool[] = [{
     functionDeclarations: [
         {
@@ -50,13 +47,24 @@ export const octoTools: Tool[] = [{
                 required: ["url"]
             }
         },
-        // 📧 NUEVA HERRAMIENTA: Lector de Gmail
         {
             name: "checkGmail",
-            description: "Revisa la bandeja de entrada de Gmail conectada buscando correos nuevos/no leídos que tengan archivos adjuntos (como facturas).",
+            description: "Revisa la bandeja de entrada de Gmail conectada buscando correos nuevos/no leídos que tengan archivos adjuntos.",
             parameters: {
                 type: SchemaType.OBJECT,
-                properties: {} // No requiere parámetros del usuario, lo hace automáticamente
+                properties: {} 
+            }
+        },
+        // 🧠 NUEVA HERRAMIENTA: Lector de Skills
+        {
+            name: "loadSkill",
+            description: "Carga un manual de habilidades (.md) desde la carpeta workspace/skills/ para adquirir nuevos conocimientos temporales.",
+            parameters: {
+                type: SchemaType.OBJECT,
+                properties: {
+                    skillName: { type: SchemaType.STRING, description: "Nombre de la skill sin extensión (ej: frontend-design)" }
+                },
+                required: ["skillName"]
             }
         }
     ]

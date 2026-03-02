@@ -7,6 +7,7 @@
     "dev": "nodemon --watch src --exec ts-node src/index.ts",
     "start": "ts-node src/index.ts",
     "build": "tsc",
+    "test": "jest",
     "check": "ts-node src/check_models.ts",
     "lint": "tsc --noEmit",
     "clean": "rimraf dist workspace/temp"
@@ -15,10 +16,11 @@
     "ai",
     "agent",
     "gemini",
-    "automation"
+    "automation",
+    "mcp"
   ],
-  "author": "Tu Nombre",
-  "license": "ISC",
+  "author": "Daniel David Barrios",
+  "license": "MIT",
   "dependencies": {
     "@google/generative-ai": "^0.24.1",
     "@modelcontextprotocol/sdk": "^1.26.0",
@@ -26,8 +28,9 @@
     "dotenv": "^16.6.1",
     "express": "^5.2.1",
     "express-rate-limit": "^8.2.1",
-    "file-type": "^21.3.0",
+    "file-type": "^16.5.4",
     "googleapis": "^171.4.0",
+    "node-cron": "^4.2.1",
     "puppeteer": "^21.11.0",
     "puppeteer-extra": "^3.3.6",
     "puppeteer-extra-plugin-stealth": "^2.11.2",
@@ -39,11 +42,15 @@
   "devDependencies": {
     "@types/cors": "^2.8.19",
     "@types/express": "^5.0.6",
+    "@types/jest": "^30.0.0",
     "@types/node": "^20.19.33",
+    "@types/node-cron": "^3.0.11",
     "@types/qrcode-terminal": "^0.12.2",
     "@types/ws": "^8.18.1",
+    "jest": "^30.2.0",
     "nodemon": "^3.1.11",
     "rimraf": "^5.0.5",
+    "ts-jest": "^29.4.6",
     "ts-node": "^10.9.2",
     "typescript": "^5.9.3"
   }

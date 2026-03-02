@@ -4,79 +4,82 @@
 
 ![OctoArch](assets/wmremove-transformed.png)
 
-The OctoArch WhatsApp module is not a simple transactional bot. It is the mobile gateway to the Cognitive Runtime, allowing you to execute complex workflows, manage servers (via MCP), and process documents directly from your phone using the whatsapp-web.js library.
+OctoArch is not a simple transactional bot. It is an advanced Cognitive Runtime and Autonomous Agent, allowing you to execute complex workflows, manage servers (via MCP), process documents via WhatsApp, and autonomously monitor corporate inboxes (Gmail).
 
-With version 4.2, the module has been upgraded to an Enterprise-Ready standard, featuring byte-level security, centralized prompt management, and strict anti-hallucination protocols.
+With **version 4.6**, the system has reached an Enterprise-Ready standard, featuring a dynamic Skills Loader, centralized byte-level security, persistent OAuth2 integrations, and strict anti-hallucination protocols.
 
-✨ Key Features
-🧠 Direct Connection to the Cognitive Core: Each phone number maintains an isolated session with short-term memory (Integrated Garbage Collector and TTL).
+## ✨ Key Features
 
-📸 InvoDex Zero-Friction Flow: Send a photo of an invoice without text. The system will auto-detect the intent (INVODEX), extract the tax fields via visual AI, generate a deterministic JSON, and inject it into the ERP via MCP.
+* **🧠 Cognitive Core & Memory:** Each interaction (API, WS, WhatsApp) maintains an isolated session with short-term memory, context compression, and an integrated Garbage Collector (TTL).
+* **📧 Autonomous Inbox Processing:** An integrated CronJob monitors authorized Gmail accounts every 15 minutes. It auto-detects unread invoices/documents, validates their bytes, and securely downloads them to the workspace without human intervention.
+* **📸 InvoDex Zero-Friction Flow:** Send a photo of an invoice via WhatsApp. The system auto-detects the intent (`INVODEX`), extracts tax fields via visual AI, generates a deterministic JSON, and injects it into the ERP via MCP.
+* **🎮 Dynamic Skills System:** Teach OctoArch new abilities on the fly. By placing Markdown (`.md`) manuals in `workspace/skills/`, the AI can load and apply new logic (e.g., UI/UX design rules, specific coding standards) without restarting the server.
+* **🔀 Virtual C-Suite & Role Routing:** Use prefixes like `octo cfo`, `octo cmo`, or `octo dev` to force the AI to adopt specific executive profiles with pre-assigned RBAC (Role-Based Access Control) permissions.
+* **🛡️ Military-Grade File Security:** The system NEVER trusts reported mimetypes or file extensions. It uses a centralized `FileValidator` for "Magic Numbers" byte-level analysis to block malicious payloads (e.g., an `.exe` disguised as a `.jpg`), whether they arrive via WhatsApp or Gmail.
+* **🥷 Stealth Web Inspection:** Powered by Puppeteer Extra and Stealth Plugins, OctoArch can navigate, bypass basic anti-bot systems, and synthesize data from the web natively.
 
-🔀 Virtual C-Suite & Role Routing: Use prefixes like octo cfo, octo cmo, or octo dev to force the AI to adopt specific executive profiles with pre-assigned RBAC (Role-Based Access Control) permissions.
+## 🚀 Initialization and Usage
 
-🛡️ Military-Grade File Security: The system no longer trusts WhatsApp's reported mimetypes. It uses "Magic Numbers" byte-level validation (file-type buffer analysis) to block malicious payloads (e.g., an .exe disguised as a .jpg).
+The multicanal services (WhatsApp, HTTP/WS API, and CronJobs) are deeply integrated into the OctoArch lifecycle. 
 
-💾 Local Auto-Save: Processed documents (like invoices) are automatically backed up in workspace/invodex_wa/.
-
-🔐 Persistent Authentication: Log in only once with a QR code; the session is encrypted and saved in workspace/auth_wa/.
-
-🚀 Initialization and Usage
-The WhatsApp service is deeply integrated into the OctoArch lifecycle. You do not need to start it separately.
-
-Start the Main Server:
-From the root of the OctoArch project, run:
-
+**Start the Main Server:**
+From the root of the project, run:
+```bash
 npm run dev
 
-Scan the QR Code:
-A QR code will appear in your terminal. Open WhatsApp on your phone > Settings > Linked devices > Link a device, and scan the screen.
+Connect your Channels:
 
-Ready! You will see the following message in the console: ✅ ¡CONECTADO! Octoarch v4.2 ya tiene WhatsApp y está pensando.
+WhatsApp: A QR code will appear in your terminal. Scan it to link the agent to your phone.
 
-💬 Commands and Syntax
+Gmail (First time only): The system uses a persistent OAuth2 refresh token stored in workspace/token.json.
+
+Frontend: A static web server automatically boots up serving the frontend/ directory.
+
+💬 Commands and Syntax (WhatsApp Module)
 The agent automatically reacts to messages sent to its chat.
 
-Zero-Friction Mode (Recommended for SMBs/Accounting):
+Zero-Friction Mode (InvoDex): Send an image directly. The system automatically parses the invoice.
 
-Send a photo (e.g., Invoice). The system automatically assumes the INVODEX role, parses the image, and skips unnecessary conversational text.
+Diagnostic: !ping -> Returns the server and vision status.
 
-Diagnostic Command:
+C-Suite Commands:
 
-!ping -> Returns the server and vision status.
+octo cfo analyze this budget -> Chief Financial Officer Mode (Strict, analytical, terminal tools blocked).
 
-Virtual C-Suite & Multi-Agent Commands:
+octo cmo review this campaign -> Chief Marketing Officer Mode (Creative, persuasive).
 
-octo cfo analyze this budget -> Chief Financial Officer Mode (Strict, analytical, focuses on ROI and metrics. Terminal tools blocked).
+octo dev check the src folder -> Developer Mode (Access to terminal, shell commands, local files, and Skills).
 
-octo cmo review this campaign -> Chief Marketing Officer Mode (Creative, persuasive, focuses on conversion and SEO).
+octo research latest AI news -> Researcher Mode (Access to web inspection and synthesis).
 
-octo dev check the src folder -> Developer Mode (Access to terminal, shell commands, and local files).
-
-octo research investigate local weather -> Researcher Mode (Access to web inspection and data synthesis).
-
-octo chat What can you do? -> Safe Conversational Mode (All system-modifying tools are blocked).
-
-octo [any prompt] -> Auto Mode. The system will deduce the best role automatically.
+octo chat What can you do? -> Safe Conversational Mode (All system-modifying tools blocked).
 
 📂 Module Architecture
-The service relies on a clean, centralized architecture, eliminating old Regex-based templates:
+The service relies on a Clean Architecture pattern, strictly separating the AI logic from tool execution:
 
 octoarch_core/
 ├── src/
-│   ├── tools/
-│   │   └── whatsapp.ts        # 📱 WhatsApp Web JS Engine, Router & Byte-Scanner
+│   ├── config/              # Environment variables and path resolution
 │   ├── core/
-│   │   ├── llm.ts             # 🧠 Cognitive brain (Gemini 2.5 Flash + Tool Orchestrator)
-│   │   └── prompt_manager.ts  # 🎭 Centralized Dictionary for Roles and System Instructions
-│   └── index.ts               # 🚀 Orchestrator that initializes the service
+│   │   ├── llm.ts               # 🧠 Cognitive brain (Gemini 2.5 Flash)
+│   │   ├── tool_orchestrator.ts # 🛠️ Execution delegator (Native vs MCP)
+│   │   └── prompt_manager.ts    # 🎭 Centralized Dictionary for Roles
+│   ├── tools/
+│   │   ├── whatsapp.ts          # 📱 WA Engine & Router
+│   │   ├── gmail.ts             # 📧 OAuth2 Mail Reader & Downloader
+│   │   ├── browser.ts           # 🥷 Stealth Puppeteer Scraper
+│   │   └── skill_loader.ts      # 🎮 Dynamic Markdown Skill injector
+│   ├── utils/
+│   │   └── file_validator.ts    # 🛡️ Centralized Magic Number byte-scanner
+│   └── index.ts             # 🚀 Orchestrator & CronJob Manager
 ├── workspace/
-│   ├── auth_wa/               # 🔐 WhatsApp session files (Ignored in Git!)
-│   └── invodex_wa/            # 💾 Auto-saved invoice JSONs
+│   ├── skills/              # 📚 Dynamic .md manuals (e.g., frontend-design.md)
+│   ├── auth_wa/             # 🔐 WhatsApp session files
+│   └── factura_correos/     # 💾 Auto-saved attachments from Gmail
 
 🛠️ Security Notes
-Origin Restriction: Currently, the code is configured with if (!msg.fromMe) return; so that it only responds to messages sent by yourself (ideal for testing and personal use). To enable it as a customer service tool, comment out that line with caution.
+Origin Restriction: Currently configured with if (!msg.fromMe) return; so it only responds to your own messages. Comment this out to deploy as a customer service bot.
 
-Anti-Hallucination: The LLM temperature is deliberately frozen at 0.1 for deterministic outputs in critical roles (like CFO or InvoDex).
+Anti-Hallucination: The LLM temperature is deliberately frozen at 0.1 for critical roles (CFO/InvoDex).
 
-Privacy: Sent images are processed in base64 in memory and sent to Google Gemini. Ensure you comply with your corporate data privacy policies before uploading sensitive financial data.
+Data Privacy: Images and documents are processed in memory (Base64/Buffers) and evaluated locally before any action is taken. Ensure you comply with corporate policies when connecting to external APIs.

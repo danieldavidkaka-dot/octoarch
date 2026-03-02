@@ -4,6 +4,7 @@ import fs from 'fs';
 import path from 'path'; 
 import { Logger } from '../utils/logger';
 import { IntelligenceCore, getBrain } from '../core/llm'; 
+import { FileValidator } from '../utils/file_validator'; // 🛡️ ESCUDO IMPORTADO
 
 export class WhatsAppService {
     private static client: Client;
@@ -128,19 +129,17 @@ export class WhatsAppService {
                         
                         if (media && media.data) {
                             try {
-                                // 🛡️ ANÁLISIS FORENSE DE ARCHIVOS (Magic Numbers)
+                                // 🛡️ ANÁLISIS FORENSE CENTRALIZADO
                                 const buffer = Buffer.from(media.data, 'base64');
-                                
-                                // Importación dinámica para evitar problemas ESM/CJS en Node.js
-                                const { fileTypeFromBuffer } = await import('file-type');
-                                const type = await fileTypeFromBuffer(buffer);
+                                const validation = await FileValidator.validateBuffer(buffer, media.filename || 'whatsapp_media');
 
-                                if (type && type.mime.startsWith('image/')) {
-                                    imageBase64 = `data:${type.mime};base64,${media.data}`;
-                                    Logger.info(`📸 Imagen verificada a nivel de bytes. Tipo real: ${type.mime}`);
+                                // Para el flujo PYME de WhatsApp verificamos que sea válido y que siga siendo una imagen
+                                if (validation.isValid && validation.mime.startsWith('image/')) {
+                                    imageBase64 = `data:${validation.mime};base64,${media.data}`;
+                                    Logger.info(`📸 Imagen verificada a nivel de bytes. Tipo real: ${validation.mime}`);
                                 } else {
-                                    Logger.warn(`🛡️ [ALERTA DE SEGURIDAD] Archivo bloqueado. Falso mimetype detectado. Tipo reportado: ${media.mimetype}, Tipo real: ${type ? type.mime : 'Desconocido'}`);
-                                    await msg.reply("🛡️ Archivo rechazado. Nuestro escáner de seguridad determinó que el archivo no es una imagen válida.");
+                                    Logger.warn(`🛡️ [ALERTA DE SEGURIDAD] Archivo bloqueado. Tipo reportado: ${media.mimetype}, Tipo real: ${validation.mime}`);
+                                    await msg.reply("🛡️ Archivo rechazado. Nuestro escáner de seguridad determinó que el archivo no es una imagen válida o permitida.");
                                     return; // 🚫 Aborta la ejecución
                                 }
                             } catch (secError) {

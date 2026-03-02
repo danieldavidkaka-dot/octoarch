@@ -1,49 +1,47 @@
-Contributing to OctoArch 🐙
-Thank you for your interest in improving OctoArch! This project was born with the vision of creating a local, modular, and stateful Cognitive Runtime highly capable of integrating with any system via the MCP protocol.
+# Contributing to OctoArch 🐙
 
-With the release of v4.2+, OctoArch now strictly follows Clean Architecture principles and enterprise-grade security standards.
+Thank you for your interest in improving OctoArch! This project was born with the vision of creating a local, modular, and stateful Cognitive Runtime highly capable of integrating with any system via the MCP protocol and native tools.
 
-How can you help?
-Currently, the core cognitive engine is highly stable and modularized. The areas where the community can add the most value are:
+With the release of **v4.6+**, OctoArch strictly follows Clean Architecture principles, enterprise-grade security standards, and features a dynamic Skills architecture.
 
-MCP (Model Context Protocol) Servers: If you build an MCP server to connect OctoArch with Notion, Spotify, Home Assistant, SQL databases, or commercial ERPs (like SAP/Profit Plus), please open a PR to add it to our recommended integrations list!
+## How can you help?
 
-Cognitive Loop & Orchestration: * Improvements in reasoning and memory management should go to src/core/llm.ts.
+Currently, the core cognitive engine is highly stable. The areas where the community can add the most value are:
 
-Improvements in tool execution, delegation, and local-bypass logic should go to src/core/tool_orchestrator.ts.
+1.  **Dynamic Skills (Zero-Code):** You don't need to know TypeScript to contribute! Write highly-optimized Markdown manuals (`.md`) teaching the AI specific frameworks or workflows, and submit them to the `workspace/skills/` directory.
+2.  **MCP (Model Context Protocol) Servers:** If you build an MCP server to connect OctoArch with Notion, Spotify, Home Assistant, SQL databases, or commercial ERPs (like SAP/Profit Plus), please open a PR to add it to our recommended integrations list.
+3.  **Native Tools:** Build new system plugins in the `src/tools/` directory (e.g., native PDF generation, advanced calendar management).
+4.  **Cognitive Loop:** Improvements in reasoning, context compression, and memory management in `src/core/llm.ts`.
 
-Prompt Engineering & Virtual C-Suite: * All system instructions, C-Suite roles (CFO, CMO, DEV), and context injections are centralized in src/core/prompt_manager.ts. If you want to add a new role (e.g., CTO or HR_MANAGER), this is the only file you need to modify.
+## Development Guidelines
 
-Native Tools: New system plugins in the src/tools/ directory (e.g., advanced web scraping, native PDF generation).
+### 1. Clean Architecture (No "God Classes")
+Use strict TypeScript. Keep functions small and modular. Do not overload `llm.ts` with execution logic. Delegations must pass through `tool_orchestrator.ts`. Do not create random `.ts` or `.txt` files for core prompts; always use the `PromptManager`.
 
-Development Guidelines
-Clean Architecture (No "God Classes" or Scattered Templates): Use strict TypeScript. Keep functions small and modular. Do not overload llm.ts with execution logic. Furthermore, do not create separate .ts or .txt files for prompts; always use the PromptManager.
+### 2. Security First (Zero-Trust & Enterprise-Grade)
+* **Data Ingestion (CRITICAL):** If your tool receives files from external sources (WhatsApp, Gmail, HTTP), you **MUST NEVER** trust the provided mimetype or extension. You must pass the raw buffer through `FileValidator.validateBuffer(buffer, name)` to verify its "Magic Numbers".
+* **File System:** If you add a tool that modifies the file system, you MUST include mathematical validations against Path Traversal attacks (normalizing and strictly comparing prefixes with the workspace path).
+* **Terminal:** Shell execution (`ShellTool`) MUST use a strict AllowList. Never allow commands that can easily exfiltrate data (like `curl` or `echo` to arbitrary locations) without heavy sanitization.
 
-Security First (Zero-Trust & Enterprise-Grade): * File System: If you add a tool that modifies the file system (FileTool), you MUST include mathematical validations against Path Traversal attacks (normalizing and strictly comparing prefixes with the workspace path).
+### 3. API Protection
+Any new HTTP endpoints added to `server.ts` must be protected by the global Rate Limiter to prevent DoS attacks.
 
-Terminal: If you add shell execution (ShellTool), you MUST use a strict AllowList and avoid commands that can exfiltrate data.
+### 4. Anti-Hallucination Standards
+OctoArch is built for business environments. When tweaking LLM parameters or adding analytical roles, prioritize deterministic outputs (`temperature: 0.1`) over creative guessing.
 
-Data Ingestion: If your tool receives files from external sources (like WhatsApp or HTTP), you MUST validate the file's "Magic Numbers" at the byte level (using file-type). Never trust the provided mimetype.
+### 5. Agnosticism
+The core of OctoArch should never depend on specific databases or commercial ERPs. Keep specific business logic inside isolated MCP connectors or Dynamic Skills.
 
-API Protection: Any new HTTP endpoints must be protected by the Rate Limiter configured in server.ts.
+### 6. Memory Management
+OctoArch is a stateful system. If you implement features that consume RAM (like Puppeteer tabs in `browser.ts` or conversation sessions), you must ensure they have proper cleanup mechanisms (e.g., `finally` blocks closing pages, TTL Garbage Collectors).
 
-Anti-Hallucination Standards: OctoArch is built for business environments. When tweaking the LLM parameters or adding financial/analytical roles, prioritize deterministic outputs (e.g., temperature: 0.1) over creative guessing.
+## Pull Request (PR) Process
 
-Agnosticism: The core of OctoArch should never depend on specific databases or commercial ERPs. Keep specific business logic (like InvoDex's SQL/API calls) inside isolated MCP connectors or generic Webhook tools.
-
-Memory Management: OctoArch is a stateful system. If you implement features that consume RAM (like Puppeteer tabs or conversation sessions), you must ensure they have proper cleanup mechanisms (e.g., finally blocks closing pages, TTL Garbage Collectors).
-
-Pull Request (PR) Process
-Fork the repository.
-
-Create your feature branch (git checkout -b feature/MyNewTool).
-
-Commit your changes with descriptive messages.
-
-Test your changes locally ensuring the Cognitive Loop, Role-Based Access Control (RBAC), and the Security Shields are not broken.
-
-Push to the branch (git push origin feature/MyNewTool).
-
-Open a Pull Request detailing what problem your code solves and how to test it.
+1.  Fork the repository.
+2.  Create your feature branch (`git checkout -b feature/MyNewTool`).
+3.  Commit your changes with descriptive messages.
+4.  Test your changes locally ensuring the Cognitive Loop, Role-Based Access Control (RBAC), and Security Shields (`FileValidator`) are not broken.
+5.  Push to the branch (`git push origin feature/MyNewTool`).
+6.  Open a Pull Request detailing what problem your code solves and how to test it.
 
 Happy coding, let's build the future of autonomous systems together! 🐙
