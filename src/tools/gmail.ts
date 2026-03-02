@@ -25,6 +25,18 @@ export class GmailTool {
         const oAuth2Client = new google.auth.OAuth2(client_id, client_secret, redirect_uris[0]);
         oAuth2Client.setCredentials(tokens);
 
+        // 🔄 NUEVO: Listener de Auto-Refresh de Tokens (Solución a Gap 1 de Sonnet)
+        oAuth2Client.on('tokens', (newTokens) => {
+            try {
+                // Leemos el token viejo, lo fusionamos con el nuevo, y lo reescribimos
+                const existing = JSON.parse(fs.readFileSync(tokenPath, 'utf-8'));
+                fs.writeFileSync(tokenPath, JSON.stringify({ ...existing, ...newTokens }, null, 2));
+                Logger.info('🔄 [Gmail] Token OAuth2 refrescado y guardado en disco automáticamente.');
+            } catch (err) {
+                Logger.error('❌ [Gmail] Error fatal intentando guardar el nuevo token OAuth2:', err);
+            }
+        });
+
         this.authClient = oAuth2Client;
         return oAuth2Client;
     }

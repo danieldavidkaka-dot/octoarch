@@ -3,8 +3,9 @@ import path from 'path';
 import { Logger } from '../utils/logger';
 
 export class SkillLoader {
-    // 🛡️ LÍMITE DE SEGURIDAD: 50KB máximo para no reventar el contexto de Gemini
-    private static readonly MAX_SKILL_SIZE = 50 * 1024; 
+    // 🛡️ LÍMITE DE SEGURIDAD: 100KB (Aprox. 25,000 tokens). 
+    // Suficiente para un manual técnico de 30 páginas, prudencial para proteger la API.
+    private static readonly MAX_SKILL_SIZE = 100 * 1024; 
 
     static async load(skillName: string): Promise<string> {
         try {
@@ -19,11 +20,11 @@ export class SkillLoader {
                 return `❌ No se encontró la skill: ${safeName}. Asegúrate de que el archivo exista en workspace/skills/.`;
             }
 
-            // 🛡️ 2. Validar el tamaño antes de leer (Evita gastar tokens innecesarios)
+            // 🛡️ 2. Validar el tamaño antes de leer (Evita gastar tokens innecesarios o crashear la RAM)
             const stats = await fs.stat(skillPath);
             if (stats.size > this.MAX_SKILL_SIZE) {
-                Logger.warn(`🛡️ [SkillLoader] Skill rechazada por exceso de tamaño: ${safeName} (${(stats.size / 1024).toFixed(2)}KB)`);
-                return `❌ La skill '${safeName}' excede el límite de seguridad de 50KB. Redúcela para proteger el consumo de tokens y la memoria.`;
+                Logger.warn(`🛡️ [SkillLoader] Skill bloqueada por exceso de tamaño: ${safeName} (${(stats.size / 1024).toFixed(2)}KB)`);
+                return `❌ La skill '${safeName}' excede el límite de seguridad de 100KB. Por favor, resume el manual en archivos más pequeños para no saturar la memoria cognitiva.`;
             }
 
             // 3. Lectura asíncrona (No bloquea el servidor)

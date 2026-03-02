@@ -5,6 +5,7 @@ import path from 'path';
 import { Logger } from '../utils/logger';
 import { IntelligenceCore, getBrain } from '../core/llm'; 
 import { FileValidator } from '../utils/file_validator'; // 🛡️ ESCUDO IMPORTADO
+import { SkillLoader } from './skill_loader'; // 🎮 NUEVO: Importamos el cargador de Skills
 
 export class WhatsAppService {
     private static client: Client;
@@ -99,12 +100,31 @@ export class WhatsAppService {
 
                     if (isCommand) {
                         const rawQuery = bodyStr.substring(5).trim();
-                        const firstWord = rawQuery.split(' ')[0].toLowerCase();
+                        const words = rawQuery.split(' ');
+                        const firstWord = words[0].toLowerCase();
                         
-                        if (this.roleMap[firstWord]) {
+                        // 🎮 NUEVO FLUJO: Bypass de Skills Cero-Latencia
+                        if (firstWord === 'skill' && words.length > 1) {
+                            const skillName = words[1];
+                            const remainingQuery = words.slice(2).join(' ');
+                            
+                            forcedIntent = 'DEV'; // Le damos poder de DEV para que pueda crear los archivos
+                            Logger.info(`🎮 [WhatsApp] Bypass de Skill detectado: Inyectando '${skillName}' directamente en RAM.`);
+                            
+                            // Leemos el disco duro SIN gastar tokens de IA
+                            const skillContent = await SkillLoader.load(skillName);
+                            
+                            // Fusionamos la instrucción del usuario con el manual completo
+                            finalQuery = `${remainingQuery}\n\n[INYECCIÓN DE SISTEMA]:\n${skillContent}`;
+                            
+                        } 
+                        // Flujo normal de C-Suite (octo cfo, octo cmo, etc)
+                        else if (this.roleMap[firstWord]) {
                             forcedIntent = this.roleMap[firstWord];
                             finalQuery = rawQuery.substring(firstWord.length).trim();
-                        } else {
+                        } 
+                        // Flujo normal sin prefijo
+                        else {
                             finalQuery = rawQuery;
                             Logger.info(`🔎 [WhatsApp] Modo detectado: AUTO (Sin restricciones)`);
                         }
