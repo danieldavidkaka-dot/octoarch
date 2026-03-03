@@ -1,34 +1,34 @@
-# 🛡️ Política de Seguridad de OctoArch
+# 🛡️ OctoArch Security Policy
 
-La seguridad de la información y la integridad de los sistemas empresariales son la máxima prioridad en el desarrollo de OctoArch. Nos tomamos muy en serio cualquier vulnerabilidad que pueda afectar el entorno local, la ejecución de herramientas o el procesamiento de datos.
+Information security and the integrity of enterprise systems are the highest priority in the development of OctoArch. We take any vulnerability that could affect the local environment, tool execution, or data processing very seriously.
 
-## 📌 Versiones Soportadas
+## 📌 Supported Versions
 
-Actualmente, solo las versiones más recientes reciben parches de seguridad y actualizaciones de la arquitectura base.
+Currently, only the most recent versions receive security patches and core architecture updates.
 
-| Versión | Soporte de Seguridad | Notas |
+| Version | Security Support | Notes |
 | :--- | :--- | :--- |
-| **v4.8.x** | ✅ Soportada | Arquitectura actual con RBAC y FileValidator. |
-| **v4.5.x** | ⚠️ Limitada | Solo parches críticos. |
-| **< v4.4** | ❌ No Soportada | Por favor, actualiza a la v4.8+. |
+| **v4.8.x** | ✅ Supported | Current architecture with RBAC and FileValidator. |
+| **v4.5.x** | ⚠️ Limited | Critical patches only. |
+| **< v4.4** | ❌ Unsupported | Please upgrade to v4.8+. |
 
-## 🕵️‍♂️ Cómo Reportar una Vulnerabilidad
+## 🕵️‍♂️ How to Report a Vulnerability
 
-**Por favor, NO abras un "Issue" público para reportar un fallo de seguridad.** Hacerlo público antes de que exista un parche pone en riesgo a todos los usuarios de OctoArch.
+**Please DO NOT open a public "Issue" to report a security flaw.** Making it public before a patch is available puts all OctoArch users at risk.
 
-Si descubres una vulnerabilidad (ej. un bypass en el sistema de roles RBAC, una inyección de comandos en la terminal, o un fallo en la validación de archivos forenses), repórtalo de manera privada:
+If you discover a vulnerability (e.g., an RBAC role system bypass, a terminal command injection, or a failure in forensic file validation), please report it privately:
 
-1. **Vía GitHub:** Ve a la pestaña **Security** > **Advisories** y haz clic en "Report a vulnerability" (Reportar una vulnerabilidad) para crear un reporte privado.
-2. **Vía Email:** Envía un correo directo al mantenedor principal del proyecto con los detalles técnicos y los pasos para reproducir el fallo.
+1. **Via GitHub:** Go to the **Security** > **Advisories** tab and click on "Report a vulnerability" to create a private report.
+2. **Via Email:** Send a direct email to the project's lead maintainer with the technical details and steps to reproduce the flaw.
 
-### ⏱️ ¿Qué puedes esperar?
-Nos comprometemos a investigar todos los reportes legítimos. Recibirás un acuse de recibo en un plazo de 48 horas, seguido de una evaluación técnica y un cronograma estimado para el lanzamiento del parche (Hotfix).
+### ⏱️ What to Expect
+We are committed to investigating all legitimate reports. You will receive an acknowledgment of receipt within 48 hours, followed by a technical evaluation and an estimated timeline for the patch release (Hotfix).
 
-## 🧬 Alcance de la Seguridad (Scope)
+## 🧬 Security Scope
 
-Nuestro modelo de amenazas considera críticos los siguientes componentes:
-* **AgentExecutor (RBAC):** Escalamiento de privilegios no autorizado (ej. Rol `CHAT` ejecutando comandos `DEV`).
-* **FileValidator:** Evasión de escáner de "Magic Numbers" o inyección de malware disfrazado de imágenes/documentos.
-* **Prompt Injection:** Intentos de forzar al LLM a revelar variables de entorno (`env.ts`) o credenciales (`tokens.json`).
+Our threat model considers the following components critical:
+* **AgentExecutor (RBAC):** Unauthorized privilege escalation (e.g., the `CHAT` role executing `DEV` commands).
+* **FileValidator:** "Magic Numbers" scanner evasion or injection of malware disguised as images/documents.
+* **Prompt Injection:** Attempts to force the LLM to reveal environment variables (`env.ts`) or credentials (`tokens.json`).
 
-Cualquier hallazgo en estas áreas será tratado con la máxima severidad. ¡Gracias por ayudarnos a mantener OctoArch como una fortaleza impenetrable! 🐙
+Any findings in these areas will be treated with the utmost severity. Thank you for helping us keep OctoArch an impenetrable fortress! 🐙
