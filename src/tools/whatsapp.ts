@@ -108,7 +108,7 @@ export class WhatsAppService {
                             const skillName = words[1];
                             const remainingQuery = words.slice(2).join(' ');
                             
-                            forcedIntent = 'DEV'; // Le damos poder de DEV para que pueda crear los archivos
+                            forcedIntent = 'AUTO'; // Le damos poder de DEV para que pueda crear los archivos
                             Logger.info(`🎮 [WhatsApp] Bypass de Skill detectado: Inyectando '${skillName}' directamente en RAM.`);
                             
                             // Leemos el disco duro SIN gastar tokens de IA

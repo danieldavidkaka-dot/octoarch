@@ -1,5 +1,3 @@
-# 🐙 OCTOARCH V4.2 - THE COGNITIVE RUNTIME
-
 ## 1. Identidad del Proyecto
 OctoArch es un Agente de Inteligencia Artificial de grado empresarial (Enterprise-Ready) diseñado para orquestar herramientas locales y remotas de forma autónoma. Su objetivo es automatizar flujos de trabajo empresariales, financieros (InvoDex) y de desarrollo a través de múltiples canales (WhatsApp, WebSockets y API HTTP).
 
@@ -9,6 +7,7 @@ OctoArch es un Agente de Inteligencia Artificial de grado empresarial (Enterpris
 * **Frameworks de Red:** Express.js (HTTP API, Health Checks, Rate Limiting) + `ws` (WebSockets).
 * **Canal Principal:** WhatsApp (vía `whatsapp-web.js` con Puppeteer).
 * **Protocolo de Herramientas:** Function Calling nativo y MCP (Model Context Protocol).
+* **Integraciones Core:** API de Gmail (Lectura automática y descarga segura de facturas), CronJobs (`node-cron`) para tareas programadas, y un Sistema de Skills dinámico (`.md`) para inyectar contexto sin latencia.
 
 ## 3. Arquitectura Limpia (Reglas Estrictas)
 El sistema está diseñado bajo el principio de separación de responsabilidades:
@@ -19,13 +18,13 @@ El sistema está diseñado bajo el principio de separación de responsabilidades
 
 ## 4. Flujos Principales de Negocio
 ### 4.1. InvoDex (Zero-Friction Accounting)
-Es el módulo contable automatizado. Cuando un usuario envía una imagen de una factura por WhatsApp sin texto, el sistema:
-1. Valida la integridad del archivo a nivel de bytes (`file-type`).
+Es el módulo contable automatizado. Cuando un usuario envía una imagen de una factura por WhatsApp sin texto, o el CronJob lee una de Gmail, el sistema:
+1. Valida la integridad del archivo a nivel de bytes (`file-type`, `FileValidator`).
 2. Asigna automáticamente el rol `INVODEX`.
 3. Extrae la data mediante IA visual.
 4. Ejecuta un Bypass local para formatear un JSON estricto.
 5. Envía la data a un ERP simulado vía MCP (`procesar_factura`).
-6. Guarda un respaldo local en `/workspace/invodex_wa` o `/workspace/invodex_ext`.
+6. Guarda un respaldo local en `/workspace/invodex_wa`, `/workspace/invodex_ext` o `/workspace/factura_correos`.
 
 ### 4.2. Sistema de Roles (C-Suite Virtual)
 OctoArch puede cambiar su personalidad y nivel de acceso en tiempo real usando prefijos en WhatsApp (ej. `octo cfo ...`):
