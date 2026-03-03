@@ -1,6 +1,7 @@
 import * as fs from 'fs/promises';
 import * as path from 'path';
 import { PATHS } from '../config/paths';
+import { CacheSystem } from '../utils/cache'; // 🧠 NUEVO: Importamos el motor
 
 export class MemorySystem {
     
@@ -39,8 +40,24 @@ export class MemorySystem {
     }
 
     static async recall(): Promise<string> {
+        const cacheKey = 'global_memory';
+
+        // 1. Intentamos leer de la caché primero (Es instantáneo)
+        const cachedMemory = await CacheSystem.get<string>(cacheKey);
+        if (cachedMemory) {
+            return cachedMemory;
+        }
+
+        // 2. Si no hay caché (o expiró), leemos del disco duro
         try {
-            return await fs.readFile(path.join(PATHS.MEMORY, 'global_context.md'), 'utf8');
-        } catch { return ""; }
+            const content = await fs.readFile(path.join(PATHS.MEMORY, 'global_context.md'), 'utf8');
+            
+            // 3. Guardamos en caché por 5 minutos (5 * 60 * 1000)
+            await CacheSystem.set(cacheKey, content, 5 * 60 * 1000);
+            
+            return content;
+        } catch { 
+            return ""; 
+        }
     }
 }

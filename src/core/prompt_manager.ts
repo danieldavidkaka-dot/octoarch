@@ -1,7 +1,7 @@
 export class PromptManager {
     static getSystemInstruction(): string {
         return `
-ERES OCTOARCH V4.2 - THE COGNITIVE RUNTIME.
+ERES OCTOARCH V4.9 - THE COGNITIVE RUNTIME.
 
 REGLAS GLOBALES:
 1. IDIOMA: Responde siempre en el idioma del usuario.
