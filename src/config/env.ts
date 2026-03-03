@@ -30,6 +30,9 @@ const envSchema = z.object({
   // Quitamos el objeto de configuración que causaba el error de tipos.
   // Al poner .min(10), Zod validará que exista y tenga longitud.
   GEMINI_API_KEY: z.string().min(10, "❌ CRÍTICO: La GEMINI_API_KEY falta o es muy corta."),
+
+  // ✈️ NUEVO: Token de Telegram (Opcional, si no está, el bot de Telegram se desactiva)
+  TELEGRAM_BOT_TOKEN: z.string().default(''),
   
   // Rutas (Las construimos dinámicamente, pero las validamos como strings)
   // Usamos process.cwd() para asegurar que la ruta sea absoluta desde donde ejecutas el comando

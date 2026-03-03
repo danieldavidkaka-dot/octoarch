@@ -4,6 +4,7 @@
  * License: MIT (Open Core)
  */
 
+import { TelegramService } from './tools/telegram';
 import { OctoServer } from './services/server';
 import { Logger } from './utils/logger';
 import { env } from './config/env';
@@ -45,6 +46,9 @@ async function main() {
 
     // 1. Inicializar Memoria
     await MemorySystem.initialize();
+
+    // 👉 ¡AQUÍ ESTÁ LA MAGIA QUE FALTA! 👈
+    TelegramService.initialize();
     
     // 2. Inicializar WhatsApp (Generará el QR en terminal)
     WhatsAppService.initialize(); 

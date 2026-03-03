@@ -2,7 +2,8 @@ import { FileTool } from '../tools/files';
 import { ShellTool } from '../tools/shell';
 import { BrowserTool } from '../tools/browser';
 import { GmailTool } from '../tools/gmail'; 
-import { SkillLoader } from '../tools/skill_loader'; // 🧠 NUEVO: Importación del Loader
+import { SkillLoader } from '../tools/skill_loader';
+import { MemoryWriterTool } from '../tools/memory_writer'; // 🧠 NUEVO: Importación del Motor de Auto-Aprendizaje
 import { Logger } from '../utils/logger';
 
 export class AgentExecutor {
@@ -12,12 +13,14 @@ export class AgentExecutor {
         const role = activeRole.toUpperCase();
 
         if (role === 'CHAT') {
-            if (['executeCommand', 'createFile', 'readFile', 'inspectWeb', 'checkGmail', 'loadSkill'].includes(opName)) {
+            // 🛡️ Agregamos 'write_skill' a la lista de bloqueos del CHAT
+            if (['executeCommand', 'createFile', 'readFile', 'inspectWeb', 'checkGmail', 'loadSkill', 'write_skill'].includes(opName)) {
                 isAllowed = false;
                 denyReason = "Modo Seguro (Chat) no permite herramientas.";
             }
         } 
-        else if (['CFO', 'CMO', 'RESEARCH', 'INVODEX'].includes(role) && ['executeCommand', 'createFile'].includes(opName)) {
+        else if (['CFO', 'CMO', 'RESEARCH', 'INVODEX'].includes(role) && ['executeCommand', 'createFile', 'write_skill'].includes(opName)) {
+            // 🛡️ Bloqueamos 'write_skill' para roles que no deben modificar el sistema
             isAllowed = false;
             denyReason = `El rol ${role} es de procesamiento/lectura, no permite modificar el sistema base.`;
         }
@@ -49,10 +52,16 @@ export class AgentExecutor {
                 const report = await GmailTool.fetchUnreadInvoices();
                 return `\n--- RESULTADO DE GMAIL ---\n${report}\n`;
             }
-            // 🧠 NUEVA CONEXIÓN: Ejecución de Skills
             if (opName === 'loadSkill') {
                 Logger.info(`🎮 Cargando Skill: ${args.skillName}`);
                 return await SkillLoader.load(args.skillName);
+            }
+            
+            // 🧠 NUEVA CONEXIÓN: Auto-Aprendizaje
+            if (opName === 'write_skill') {
+                Logger.info(`💾 Escribiendo nueva Skill en memoria permanente: ${args.filename}`);
+                const result = await MemoryWriterTool.execute(args);
+                return `\n--- RESULTADO DE MEMORY WRITER ---\n${result}\n`;
             }
             
             return `❌ Herramienta desconocida: ${opName}`;

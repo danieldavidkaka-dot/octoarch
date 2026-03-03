@@ -71,7 +71,7 @@ export class WhatsAppService {
         });
 
         this.client.on('ready', () => {
-            Logger.info("✅ ¡CONECTADO! Octoarch v4.2 ya tiene WhatsApp y está pensando.");
+            Logger.info("✅ ¡CONECTADO! Octoarch v4.9 ya tiene WhatsApp y está pensando.");
             this.isReady = true;
         });
 
@@ -84,7 +84,7 @@ export class WhatsAppService {
             if (!msg.body && !msg.hasMedia) return;
 
             if (msg.body === '!ping') {
-                await msg.reply('🐙 OctoArch v4.2 Online, Secure & Seeing.');
+                await msg.reply('🐙 OctoArch v4.9 Online, Secure & Seeing.');
                 return;
             }
 
@@ -139,7 +139,7 @@ export class WhatsAppService {
 
                     if (forcedIntent) Logger.info(`🔎 [WhatsApp] Modo activo: ${forcedIntent}`);
 
-                    await msg.react('🧠');
+                    await msg.react('🧠').catch(() => {});
 
                     let imageBase64: string | null = null;
 
@@ -193,12 +193,12 @@ export class WhatsAppService {
                         }
                     }
 
-                    await msg.react('✅');
+                    await msg.react('✅').catch(() => {});
                     await msg.reply(aiResponse);
 
                 } catch (error) {
                     Logger.error("❌ Error en WhatsApp AI:", error);
-                    await msg.react('❌');
+                    await msg.react('❌').catch(() => {});
                     await msg.reply("⚠️ Tuve un fallo crítico procesando la instrucción o imagen.");
                 }
             }

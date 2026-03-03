@@ -55,7 +55,6 @@ export const octoTools: Tool[] = [{
                 properties: {} 
             }
         },
-        // 🧠 NUEVA HERRAMIENTA: Lector de Skills
         {
             name: "loadSkill",
             description: "Carga un manual de habilidades (.md) desde la carpeta workspace/skills/ para adquirir nuevos conocimientos temporales.",
@@ -65,6 +64,19 @@ export const octoTools: Tool[] = [{
                     skillName: { type: SchemaType.STRING, description: "Nombre de la skill sin extensión (ej: frontend-design)" }
                 },
                 required: ["skillName"]
+            }
+        },
+        // 🧠 NUEVA HERRAMIENTA: El Hipocampo Digital (Auto-Aprendizaje)
+        {
+            name: "write_skill",
+            description: "Permite a OctoArch crear o actualizar una Habilidad (Skill) en el disco duro. Úsala cuando el usuario te pida aprender algo nuevo, guardar reglas, o recordar preferencias permanentemente.",
+            parameters: {
+                type: SchemaType.OBJECT,
+                properties: {
+                    filename: { type: SchemaType.STRING, description: "Nombre del archivo (ej. 'experto-seo.md' o 'reglas-cfo.md'). DEBE terminar en .md" },
+                    content: { type: SchemaType.STRING, description: "El contenido completo en formato Markdown. DEBE incluir el frontmatter YAML con 'name' y 'description' al inicio." }
+                },
+                required: ["filename", "content"]
             }
         }
     ]
