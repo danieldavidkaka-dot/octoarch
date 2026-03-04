@@ -17,6 +17,7 @@ import cron from 'node-cron'; // ⏱️ NUEVO: Reloj interno
 import express from 'express';
 import path from 'path';
 import fs from 'fs';
+import { WebSocketServer } from 'ws'; // 🌐 NUEVO: Importamos el gestor de WebSockets
 
 async function main() {
   await runDiagnosis();
@@ -71,8 +72,17 @@ async function main() {
         `);
     });
 
-    app.listen(8080, () => {
+    // 🌐 MODIFICADO: Guardamos el servidor en una variable para pegarle los WebSockets
+    const httpServer = app.listen(8080, () => {
         Logger.info('🌐 WEB ONLINE: http://localhost:8080');
+    });
+
+    // 🌐 4.5 INICIAR EL TÚNEL DE WEBSOCKETS (LIVE CANVAS)
+    const wss = new WebSocketServer({ server: httpServer });
+    wss.on('connection', (ws) => {
+        Logger.info('🖥️ Cliente Web conectado al Dashboard en vivo.');
+        Logger.addClient(ws); // Conectamos la web al Logger
+        ws.send(JSON.stringify({ time: new Date().toISOString().substring(11, 19), level: 'INFO', message: 'Sistema OctoArch Conectado.' }));
     });
 
     // ⏱️ 5. INICIAR EL CORAZÓN AUTOMÁTICO (CRONJOB)

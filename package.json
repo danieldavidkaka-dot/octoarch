@@ -4,6 +4,7 @@
   "description": "Octoarch - Enterprise Local AI Agent",
   "main": "dist/index.js",
   "scripts": {
+    "setup": "ts-node src/setup.ts",
     "dev": "nodemon --watch src --exec ts-node src/index.ts",
     "start": "ts-node src/index.ts",
     "build": "tsc",
