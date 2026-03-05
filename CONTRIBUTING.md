@@ -2,7 +2,7 @@
 
 Thank you for your interest in improving OctoArch! This project was born with the vision of creating a local, modular, and stateful Cognitive Runtime highly capable of integrating with any system via the MCP protocol, native tools, and now, **Autonomous Swarm Intelligence**.
 
-With the release of **v4.9+**, OctoArch strictly follows Clean Architecture principles, enterprise-grade security standards, and features a revolutionary Auto-Programming pipeline (Hot-Swapping) alongside its Dynamic Contextual Skills.
+With the release of **v5.0+**, OctoArch strictly follows Clean Architecture principles, enterprise-grade security standards, and features a revolutionary Auto-Programming pipeline (Hot-Swapping) alongside its Dynamic Contextual Skills.
 
 ## How can you help?
 

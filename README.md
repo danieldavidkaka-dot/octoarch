@@ -4,7 +4,7 @@
 
 ![OctoArch](assets/wmremove-transformed.png)
 
-¡Por supuesto, Arquitecto! Es el momento perfecto para actualizar la documentación. Acabamos de dar un salto generacional masivo al pasar de la versión 4.6 a la 4.9, introduciendo el Sistema Swarm y la Auto-programación en caliente (Hot-Swap).
+¡Por supuesto, Arquitecto! Es el momento perfecto para actualizar la documentación. Acabamos de dar un salto generacional masivo al pasar de la versión 4.6 a la 5.0, introduciendo el Sistema Swarm y la Auto-programación en caliente (Hot-Swap).
 
 Aquí tienes el README.md actualizado en un inglés impecable, técnico y profesional, digno de un repositorio de alto nivel. Puedes copiarlo y pegarlo directamente:
 
@@ -17,7 +17,7 @@ Markdown
 
 OctoArch is not a simple transactional bot. It is an advanced Cognitive Runtime and Autonomous Agent, allowing you to execute complex workflows, manage servers (via MCP), process documents via WhatsApp/Telegram, and autonomously monitor corporate inboxes (Gmail).
 
-With **version 4.9**, the system has reached a new paradigm: **Swarm Intelligence**. OctoArch can now write, debug, and dynamically inject its own TypeScript code into its neural network at runtime, achieving true self-evolution without human intervention or server restarts.
+With **version 5.0**, the system has reached a new paradigm: **Swarm Intelligence**. OctoArch can now write, debug, and dynamically inject its own TypeScript code into its neural network at runtime, achieving true self-evolution without human intervention or server restarts.
 
 ## ✨ Key Features
 
