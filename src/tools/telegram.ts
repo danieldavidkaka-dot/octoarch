@@ -44,7 +44,7 @@ export class TelegramService {
                 if (!text) return;
 
                 if (text === '/start' || text === '!ping') {
-                    await this.bot?.sendMessage(chatId, '🐙 OctoArch v4.9 Online, Secure & Ready en Telegram.');
+                    await this.bot?.sendMessage(chatId, '🐙 OctoArch v5.0 Online, Secure & Ready en Telegram.');
                     return;
                 }
 
@@ -68,7 +68,7 @@ export class TelegramService {
             });
 
             this.isReady = true;
-            Logger.info("✅ ¡CONECTADO! OctoArch v4.9 ya tiene Telegram y está escuchando.");
+            Logger.info("✅ ¡CONECTADO! OctoArch v5.0 ya tiene Telegram y está escuchando.");
 
         } catch (error) {
             Logger.error("❌ Error fatal iniciando Telegram", error);

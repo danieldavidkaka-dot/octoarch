@@ -1,5 +1,5 @@
 /**
- * Octoarch v4.9 - The Cognitive Runtime
+ * Octoarch v5.0 - The Cognitive Runtime
  * Copyright (c) 2026 Daniel David Barrios
  * License: MIT (Open Core)
  */
@@ -12,12 +12,13 @@ import { MemorySystem } from './core/memory';
 import { runDiagnosis } from './utils/diagnose'; 
 import { WhatsAppService } from './tools/whatsapp';
 import { MCPManager } from './core/mcp_manager'; // 🔌 Importamos el gestor MCP
-import { GmailTool } from './tools/gmail'; // 📧 NUEVO: Herramienta de Gmail
-import cron from 'node-cron'; // ⏱️ NUEVO: Reloj interno
+import { GmailTool } from './tools/gmail'; // 📧 Herramienta de Gmail
+import { DynamicRegistry } from './dynamic_registry'; // 🚀 NUEVO: Registro Dinámico de Herramientas
+import cron from 'node-cron'; // ⏱️ Reloj interno
 import express from 'express';
 import path from 'path';
 import fs from 'fs';
-import { WebSocketServer } from 'ws'; // 🌐 NUEVO: Importamos el gestor de WebSockets
+import { WebSocketServer } from 'ws'; // 🌐 Importamos el gestor de WebSockets
 
 async function main() {
   await runDiagnosis();
@@ -45,16 +46,17 @@ async function main() {
         ["ts-node", path.join(__dirname, "mcp_invodex_mock.ts")]
     );
 
-    // 1. Inicializar Memoria
+    // 1. Inicializar Memoria y Cargar Herramientas Dinámicas del Obrero
     await MemorySystem.initialize();
+    await DynamicRegistry.loadAll(); // 🚀 MAGIA: Cargamos los módulos auto-programados
 
-    // 👉 ¡AQUÍ ESTÁ LA MAGIA QUE FALTA! 👈
+    // 👉 Inicializar canales de comunicación
     TelegramService.initialize();
     
     // 2. Inicializar WhatsApp (Generará el QR en terminal)
     WhatsAppService.initialize(); 
 
-    // 3. Iniciar Cerebro (Servidor API)
+    // 3. Iniciar Cerebro (Servidor API HTTP y Lógica)
     const server = new OctoServer(env.PORT);
     server.start();
 
@@ -96,10 +98,6 @@ async function main() {
             
             if (!report.includes("No hay correos nuevos")) {
                 Logger.info(`📬 [CRON] Tarea completada. Resultados:\n${report}`);
-                
-                // 💡 TIP ARQUITECTO: Si en el futuro quieres que te avise por WhatsApp 
-                // cuando descargue algo en automático, descomenta esto y pon tu número:
-                // await WhatsAppService.sendMessage('58414XXXXXXX@c.us', `🐙 *InvoDex Auto:*\nAcabo de procesar nuevos correos:\n\n${report}`);
             } else {
                 Logger.info(`📭 [CRON] Bandeja revisada. Sin novedades.`);
             }

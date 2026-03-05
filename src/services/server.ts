@@ -51,7 +51,7 @@ export class OctoServer {
         this.app.get('/health', (req, res) => {
             res.status(200).json({ 
                 status: 'online', 
-                version: '4.9',
+                version: '5.0',
                 timestamp: new Date().toISOString()
             });
         });
@@ -162,7 +162,7 @@ export class OctoServer {
 
         // Iniciar el servidor unificado
         this.httpServer.listen(this.port, () => {
-            Logger.info(`OctoArch Server v4.9 (Híbrido HTTP/WS) escuchando en el puerto ${this.port}`);
+            Logger.info(`OctoArch Server v5.0 (Híbrido HTTP/WS) escuchando en el puerto ${this.port}`);
             Logger.info(`🛡️ Rate Limiter Activo (Max 30 req/min por IP)`);
             Logger.info(`🩺 Health Check: GET http://localhost:${this.port}/health`);
             Logger.info(`🤖 API Chat: POST http://localhost:${this.port}/api/chat`);

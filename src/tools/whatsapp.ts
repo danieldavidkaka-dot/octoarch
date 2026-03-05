@@ -71,7 +71,7 @@ export class WhatsAppService {
         });
 
         this.client.on('ready', () => {
-            Logger.info("✅ ¡CONECTADO! Octoarch v4.9 ya tiene WhatsApp y está pensando.");
+            Logger.info("✅ ¡CONECTADO! Octoarch v5.0 ya tiene WhatsApp y está pensando.");
             this.isReady = true;
         });
 
@@ -84,7 +84,7 @@ export class WhatsAppService {
             if (!msg.body && !msg.hasMedia) return;
 
             if (msg.body === '!ping') {
-                await msg.reply('🐙 OctoArch v4.9 Online, Secure & Seeing.');
+                await msg.reply('🐙 OctoArch v5.0 Online, Secure & Seeing.');
                 return;
             }
 

@@ -4,7 +4,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 
 export async function runDiagnosis() {
-    console.log('\n🏥 === DIAGNÓSTICO DE SISTEMA OCTOARCH v4.9 ===');
+    console.log('\n🏥 === DIAGNÓSTICO DE SISTEMA OCTOARCH v5.0 ===');
     let hasError = false;
 
     // 1. Chequeo de Entorno (.env)
