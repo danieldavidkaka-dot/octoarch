@@ -4,17 +4,6 @@
 
 ![OctoArch](assets/wmremove-transformed.png)
 
-¡Por supuesto, Arquitecto! Es el momento perfecto para actualizar la documentación. Acabamos de dar un salto generacional masivo al pasar de la versión 4.6 a la 5.0, introduciendo el Sistema Swarm y la Auto-programación en caliente (Hot-Swap).
-
-Aquí tienes el README.md actualizado en un inglés impecable, técnico y profesional, digno de un repositorio de alto nivel. Puedes copiarlo y pegarlo directamente:
-
-Markdown
-# 🐙 OctoArch - The Cognitive Runtime
-
-[![AI for Good](https://img.shields.io/badge/AI-Make_the_world_a_better_place-success)](#) [![Free Venezuela](https://img.shields.io/badge/Free-Venezuela_🇻🇪_|_Free_the_world_❤️-ff0000)](#)
-
-![OctoArch](assets/wmremove-transformed.png)
-
 OctoArch is not a simple transactional bot. It is an advanced Cognitive Runtime and Autonomous Agent, allowing you to execute complex workflows, manage servers (via MCP), process documents via WhatsApp/Telegram, and autonomously monitor corporate inboxes (Gmail).
 
 With **version 5.0**, the system has reached a new paradigm: **Swarm Intelligence**. OctoArch can now write, debug, and dynamically inject its own TypeScript code into its neural network at runtime, achieving true self-evolution without human intervention or server restarts.
@@ -37,7 +26,9 @@ The omnichannel services (WhatsApp, Telegram, HTTP/WS API, and CronJobs) are dee
 **Start the Main Server:**
 From the root of the project, run:
 ```bash
-npm run dev
+npm run start
+
+(Use npm run dev only if you are manually coding the core, to enable Nodemon).
 
 Connect your Channels:
 

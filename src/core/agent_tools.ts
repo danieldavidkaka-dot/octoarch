@@ -66,7 +66,6 @@ export const octoTools: Tool[] = [{
                 required: ["skillName"]
             }
         },
-        // 🧠 NUEVA HERRAMIENTA: El Hipocampo Digital (Auto-Aprendizaje)
         {
             name: "write_skill",
             description: "Permite a OctoArch crear o actualizar una Habilidad (Skill) en el disco duro. Úsala cuando el usuario te pida aprender algo nuevo, guardar reglas, o recordar preferencias permanentemente.",
@@ -77,6 +76,18 @@ export const octoTools: Tool[] = [{
                     content: { type: SchemaType.STRING, description: "El contenido completo en formato Markdown. DEBE incluir el frontmatter YAML con 'name' y 'description' al inicio." }
                 },
                 required: ["filename", "content"]
+            }
+        },
+        // 🔨 NUEVO: El Puente de Autonomía (Sistema Swarm)
+        {
+            name: "forge_new_tool",
+            description: "INVOCA AL OBRERO (Sistema Swarm) para programar una nueva herramienta ejecutable en TypeScript (.ts). Úsala cuando necesites interactuar con una API nueva, leer hardware local o necesites capacidades de ejecución que actualmente no posees. NO la uses para guardar contexto o conocimiento (para eso usa write_skill).",
+            parameters: {
+                type: SchemaType.OBJECT,
+                properties: {
+                    task_description: { type: SchemaType.STRING, description: "Instrucciones conceptuales para el Obrero. PROHIBIDO ESCRIBIR CÓDIGO AQUÍ. Solo describe qué debe hacer la herramienta (ej: 'Usa el módulo os para leer la RAM'). El Obrero se encargará de programarlo." }
+                },
+                required: ["task_description"]
             }
         }
     ]

@@ -1,43 +1,47 @@
-// spawner.ts - El Orquestador
+// spawner.ts - El Orquestador del Sistema Swarm
 import { fork } from 'child_process';
 import path from 'path';
+import { Logger } from '../utils/logger';
 
-async function invocarSubAgente() {
-    console.log(`[👑 ORQUESTADOR]: Son las 3:00 AM. Necesito crear un módulo nuevo.`);
-    console.log(`[👑 ORQUESTADOR]: Invocando al Obrero en un hilo separado...`);
+export class Spawner {
+    static async invokeWorker(taskDescription: string): Promise<string> {
+        return new Promise((resolve, reject) => {
+            Logger.info(`[👑 ORQUESTADOR]: Necesito crear un módulo nuevo.`);
+            Logger.info(`[👑 ORQUESTADOR]: Misión: "${taskDescription}"`);
+            Logger.info(`[👑 ORQUESTADOR]: Invocando al Obrero en un hilo separado...`);
 
-    // Buscamos la ruta exacta del archivo worker.ts
-    const workerPath = path.join(__dirname, 'worker.ts');
+            const workerPath = path.join(__dirname, 'worker.ts');
 
-    // fork() es la magia: crea un proceso clon de Node.js
-    const worker = fork(workerPath, {
-        // execArgv es crucial para que funcione con TypeScript (ts-node)
-        execArgv: ['-r', 'ts-node/register'] 
-    });
+            const worker = fork(workerPath, {
+                execArgv: ['-r', 'ts-node/register'] 
+            });
 
-    // Le damos la orden al Obrero
-    worker.send({ tarea: 'Escribir módulo de clima' });
+            // Le pasamos la tarea dinámica que OctoArch nos pidió
+            worker.send({ tarea: taskDescription });
 
-    // Escuchamos la respuesta del Obrero
-    worker.on('message', (respuesta: any) => {
-        console.log(`[👑 ORQUESTADOR]: Recibí el paquete del Obrero. Estado: ${respuesta.estado}`);
-        if (respuesta.estado === 'EXITO') {
-            console.log(`[👑 ORQUESTADOR]: Archivo listo en:\n${respuesta.archivo}`);
-        } else {
-            console.log(`[👑 ORQUESTADOR]: Motivo del fallo:\n${respuesta.error}`);
-        }
-    });
+            worker.on('message', (respuesta: any) => {
+                Logger.info(`[👑 ORQUESTADOR]: Recibí el paquete del Obrero. Estado: ${respuesta.estado}`);
+                if (respuesta.estado === 'EXITO') {
+                    Logger.info(`[👑 ORQUESTADOR]: Archivo listo en:\n${respuesta.archivo}`);
+                    resolve(`✅ Herramienta forjada con éxito y promovida a producción en: ${respuesta.archivo}. OctoArch, puedes usarla inmediatamente.`);
+                } else {
+                    Logger.error(`[👑 ORQUESTADOR]: Motivo del fallo:\n${respuesta.error}`);
+                    resolve(`❌ El Obrero falló al forjar la herramienta. Razón: ${respuesta.error}`);
+                }
+            });
 
-    // Detectamos cuando el Obrero muere
-    worker.on('exit', (code) => {
-        if (code === 0) {
-            console.log(`[👑 ORQUESTADOR]: El Obrero ha sido eliminado limpiamente de la memoria RAM (Código 0).`);
-        } else {
-            console.log(`[👑 ORQUESTADOR]: ALERTA - El Obrero colapsó con código de error ${code}.`);
-        }
-        console.log(`[👑 ORQUESTADOR]: Ciclo nocturno terminado. OctoArch sigue funcionando al 100%.`);
-    });
+            worker.on('error', (err) => {
+                Logger.error(`[👑 ORQUESTADOR]: Error en el proceso del Obrero: ${err.message}`);
+                resolve(`❌ Error crítico al invocar al Obrero: ${err.message}`);
+            });
+
+            worker.on('exit', (code) => {
+                if (code === 0) {
+                    Logger.info(`[👑 ORQUESTADOR]: El Obrero ha sido eliminado limpiamente de la memoria RAM.`);
+                } else {
+                    Logger.warn(`[👑 ORQUESTADOR]: ALERTA - El Obrero colapsó con código de error ${code}.`);
+                }
+            });
+        });
+    }
 }
-
-// Ejecutamos la prueba
-invocarSubAgente();

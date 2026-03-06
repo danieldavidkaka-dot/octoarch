@@ -5,6 +5,7 @@ import { GmailTool } from '../tools/gmail';
 import { SkillLoader } from '../tools/skill_loader';
 import { MemoryWriterTool } from '../tools/memory_writer'; // 🧠 NUEVO: Importación del Motor de Auto-Aprendizaje
 import { Logger } from '../utils/logger';
+import { ForgeTool } from '../tools/forge_tool'; // 🔨 NUEVO: El puente al Obrero
 
 export class AgentExecutor {
     static async execute(opName: string, args: any, activeRole: string): Promise<string> {
@@ -13,14 +14,14 @@ export class AgentExecutor {
         const role = activeRole.toUpperCase();
 
         if (role === 'CHAT') {
-            // 🛡️ Agregamos 'write_skill' a la lista de bloqueos del CHAT
-            if (['executeCommand', 'createFile', 'readFile', 'inspectWeb', 'checkGmail', 'loadSkill', 'write_skill'].includes(opName)) {
+            // 🛡️ Agregamos 'write_skill' y 'forge_new_tool' a la lista de bloqueos del CHAT
+            if (['executeCommand', 'createFile', 'readFile', 'inspectWeb', 'checkGmail', 'loadSkill', 'write_skill', 'forge_new_tool'].includes(opName)) {
                 isAllowed = false;
                 denyReason = "Modo Seguro (Chat) no permite herramientas.";
             }
         } 
-        else if (['CFO', 'CMO', 'RESEARCH', 'INVODEX'].includes(role) && ['executeCommand', 'createFile', 'write_skill'].includes(opName)) {
-            // 🛡️ Bloqueamos 'write_skill' para roles que no deben modificar el sistema
+        else if (['CFO', 'CMO', 'RESEARCH', 'INVODEX'].includes(role) && ['executeCommand', 'createFile', 'write_skill', 'forge_new_tool'].includes(opName)) {
+            // 🛡️ Bloqueamos 'write_skill' y 'forge_new_tool' para roles que no deben modificar el sistema
             isAllowed = false;
             denyReason = `El rol ${role} es de procesamiento/lectura, no permite modificar el sistema base.`;
         }
@@ -62,6 +63,13 @@ export class AgentExecutor {
                 Logger.info(`💾 Escribiendo nueva Skill en memoria permanente: ${args.filename}`);
                 const result = await MemoryWriterTool.execute(args);
                 return `\n--- RESULTADO DE MEMORY WRITER ---\n${result}\n`;
+            }
+
+            // 🔨 NUEVO: El Puente al Obrero (Sistema Swarm)
+            if (opName === 'forge_new_tool') {
+                Logger.info(`🤖 Ejecutando orden de auto-programación al Sistema Swarm`);
+                const result = await ForgeTool.execute(args);
+                return `\n--- RESULTADO DE LA FORJA (SISTEMA SWARM) ---\n${result}\n`;
             }
             
             return `❌ Herramienta desconocida: ${opName}`;
