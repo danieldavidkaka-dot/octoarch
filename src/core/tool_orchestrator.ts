@@ -3,12 +3,18 @@ import { MCPManager } from './mcp_manager';
 import { Logger } from '../utils/logger';
 import { DynamicRegistry } from '../dynamic_registry'; // 🚀 NUEVO: Importamos el Registro Dinámico
 
+// 🛡️ REFACTOR: Adiós al 'any'. Definimos estrictamente la forma de la llamada a la herramienta.
+export interface FunctionCallRequest {
+    name: string;
+    args: Record<string, any>; // Usamos Record genérico para los argumentos, ya que varían por herramienta
+}
+
 export class ToolOrchestrator {
     /**
      * Procesa la lista de herramientas que el LLM solicitó usar.
      * Retorna los resultados concatenados y los datos extraídos listos para el bucle cognitivo.
      */
-    static async executeTurn(functionCalls: any[], activeRole: string): Promise<{
+    static async executeTurn(functionCalls: FunctionCallRequest[], activeRole: string): Promise<{
         toolOutputs: string;
         extractedJson: string;
         operationsPerformed: boolean;
@@ -40,8 +46,10 @@ export class ToolOrchestrator {
                     try {
                         const mcpResult = await MCPManager.getInstance().executeTool(call.name, call.args);
                         executionResult = `\n--- RESULTADO MCP (${call.name}) ---\n${mcpResult}\n`;
-                    } catch (mcpError: any) {
-                        executionResult = `❌ [ERROR MCP en ${call.name}]: ${mcpError.message}\n`;
+                    } catch (mcpError: unknown) {
+                        // 🛡️ REFACTOR: Manejo de errores estricto sin usar 'any'
+                        const errorMessage = mcpError instanceof Error ? mcpError.message : String(mcpError);
+                        executionResult = `❌ [ERROR MCP en ${call.name}]: ${errorMessage}\n`;
                     }
                 }
             }

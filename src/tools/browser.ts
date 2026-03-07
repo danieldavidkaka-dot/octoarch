@@ -33,6 +33,18 @@ export class BrowserTool {
                     '--disable-blink-features=AutomationControlled'
                 ] 
             });
+
+            // 🛡️ REFACTOR: Sensor Cardíaco (Anti-Zombis)
+            // Si Chrome crashea o el SO lo mata (ej. falta de RAM), limpiamos todo automáticamente.
+            this.browserInstance.on('disconnected', () => {
+                Logger.warn('⚠️ [BrowserTool] Puppeteer se ha desconectado inesperadamente (Crash/OOM). Limpiando referencias...');
+                if (this.idleTimeout) {
+                    clearTimeout(this.idleTimeout);
+                    this.idleTimeout = null;
+                }
+                this.browserInstance = null;
+                this.activePageCount = 0; // Reseteamos el contador de pestañas
+            });
         }
         
         // 🛡️ Cada vez que pedimos el navegador, cancelamos el apagado automático
@@ -128,7 +140,8 @@ export class BrowserTool {
             if (page) {
                 await page.close().catch(() => {});
             }
-            this.activePageCount--;
+            // Aseguramos que el contador no baje de 0 si hubo alguna desincronización
+            this.activePageCount = Math.max(0, this.activePageCount - 1);
             this.scheduleIdleShutdown(); // Solo iniciará si activePageCount llega a 0
         }
     }

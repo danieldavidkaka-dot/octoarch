@@ -1,9 +1,18 @@
 import fs from 'fs/promises';
 import path from 'path';
-import { Logger } from './utils/logger'; // Corregida la ruta del import
+import { Logger } from './utils/logger';
+
+// 🛡️ NUEVO: Interfaz estricta para garantizar que toda herramienta dinámica tenga el formato correcto
+export interface IOctoTool {
+    name: string;
+    description: string;
+    parameters: any;
+    execute: (args: any) => Promise<string>;
+}
 
 export class DynamicRegistry {
-    private static tools: Map<string, any> = new Map();
+    // 🛡️ REFACTOR: Cambiamos de 'any' a la interfaz estricta 'IOctoTool'
+    private static tools: Map<string, IOctoTool> = new Map();
     private static schemas: any[] = [];
 
     /**
@@ -37,17 +46,32 @@ export class DynamicRegistry {
                         const module = require(filePath);
                         const tool = module.tool;
 
-                        if (tool && tool.name) {
-                            this.tools.set(tool.name, tool);
-                            this.schemas.push({
-                                name: tool.name,
-                                description: tool.description,
-                                parameters: tool.parameters
-                            });
-                            Logger.info(`🔌 [Hot-Swap] Herramienta inyectada: ${tool.name}`);
-                        } else {
-                            Logger.warn(`⚠️ El archivo ${file} no exporta un objeto 'tool' válido.`);
+                        // 🛡️ CORTAFUEGOS DE HOT-SWAP: Validación exhaustiva de la herramienta forjada
+                        if (!tool) {
+                            Logger.warn(`⚠️ El archivo ${file} no exporta un objeto 'tool'.`);
+                            continue;
                         }
+                        
+                        if (!tool.name) {
+                            Logger.warn(`⚠️ El archivo ${file} exporta un 'tool' pero le falta la propiedad 'name'.`);
+                            continue;
+                        }
+                        
+                        if (typeof tool.execute !== 'function') {
+                            Logger.error(`🚨 [Hot-Swap Rechazado] El archivo ${file} exporta un 'tool' válido pero NO tiene el método 'execute()'. El archivo será ignorado para evitar la caída del servidor.`);
+                            continue;
+                        }
+
+                        // ✅ Si pasó el cortafuegos, inyectamos al cerebro
+                        this.tools.set(tool.name, tool as IOctoTool);
+                        this.schemas.push({
+                            name: tool.name,
+                            description: tool.description,
+                            parameters: tool.parameters
+                        });
+                        
+                        Logger.info(`🔌 [Hot-Swap] Herramienta inyectada de forma segura: ${tool.name}`);
+
                     } catch (importError: any) {
                         Logger.error(`❌ Error cargando módulo ${file}:`, importError.message);
                     }
@@ -69,6 +93,7 @@ export class DynamicRegistry {
         if (tool) {
             try {
                 Logger.info(`⚙️ Ejecutando herramienta dinámica: ${name}`);
+                // Ahora TypeScript sabe que 'execute' existe y es una función
                 return await tool.execute(args);
             } catch (error: any) {
                 return `❌ Error interno en la herramienta dinámica '${name}': ${error.message}`;

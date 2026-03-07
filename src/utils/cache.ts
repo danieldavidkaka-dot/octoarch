@@ -31,10 +31,21 @@ export class CacheSystem {
             expiry: Date.now() + ttlMs
         };
         
-        // Guardamos en Memoria (si quisieras) y en Disco
         try {
             await this.init();
-            await fs.writeFile(this.getFilePath(key), JSON.stringify(entry), 'utf8');
+            const filepath = this.getFilePath(key);
+            
+            // 🛡️ REFACTOR (Cortafuegos de Concurrencia): Escritura Atómica
+            // 1. Creamos un nombre de archivo temporal único
+            const tempFilepath = `${filepath}.${Date.now()}_${Math.random().toString(36).substring(2, 8)}.tmp`;
+            
+            // 2. Escribimos los datos en el archivo temporal de forma segura
+            await fs.writeFile(tempFilepath, JSON.stringify(entry), 'utf8');
+            
+            // 3. Renombramos el archivo de golpe. A nivel de SO esto es una operación atómica,
+            // garantizando que nunca se corromperá el archivo final si hay colisiones.
+            await fs.rename(tempFilepath, filepath);
+            
         } catch (error) {
             Logger.warn('⚠️ No se pudo guardar en caché:', error);
         }
