@@ -1,3 +1,5 @@
+# 🌍 Contexto Global - OctoArch v5.0
+
 ## 1. Identidad del Proyecto
 OctoArch es un Agente de Inteligencia Artificial de grado empresarial (Enterprise-Ready) con capacidades de **Inteligencia de Enjambre (Swarm Intelligence) y Auto-Evolución**. Está diseñado para orquestar herramientas locales, escribir su propio código, y conectarse a sistemas remotos de forma autónoma. Su objetivo es automatizar flujos de trabajo empresariales, financieros (InvoDex) y de desarrollo a través de una arquitectura omnicanal (WhatsApp, Telegram, WebSockets y API HTTP).
 
@@ -18,6 +20,7 @@ El sistema está diseñado bajo el principio de separación de responsabilidades
 * **Seguridad (RBAC):** Existe un Control de Acceso Basado en Roles estricto. Roles como `CFO`, `CMO` o `INVODEX` tienen prohibido ejecutar comandos de terminal (`executeCommand`) o modificar archivos del sistema base.
 
 ## 4. Flujos Principales de Negocio
+
 ### 4.1. Auto-Programación (Sistema Swarm)
 Cuando OctoArch necesita una herramienta técnica nueva, el Orquestador invoca a `spawner.ts`. El Obrero (Sub-Agente) escribe el código usando una plantilla estricta de Gemini, lo compila en la RAM, y si pasa las pruebas, el `DynamicRegistry` limpia la caché de Node.js e inyecta la nueva herramienta al Cerebro en tiempo real (Hot-Swap) sin reiniciar el servidor.
 

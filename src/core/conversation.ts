@@ -6,10 +6,10 @@ export interface Message {
 
 export class ConversationManager {
   private history: Message[] = [];
-  private rollingSummary: string = ""; // 🧠 Nuevo: Memoria comprimida
+  private rollingSummary: string = ""; 
   
-  private readonly MAX_HISTORY = 20; // Cuándo disparamos la compresión
-  private readonly KEEP_RECENT = 8;  // Cuántos mensajes intactos dejamos
+  public readonly MAX_HISTORY = 20; 
+  public readonly KEEP_RECENT = 8;  
 
   add(role: 'user' | 'model' | 'system', content: string) {
     this.history.push({
@@ -19,17 +19,22 @@ export class ConversationManager {
     });
   }
 
-  // 🛡️ Verifica si el historial alcanzó el punto crítico
+  // ☁️ NUEVO: Método para inyectar la memoria desde Supabase
+  loadHistory(messages: Message[]) {
+    // Solo inyectamos si la RAM está vacía, para no duplicar mensajes
+    if (this.history.length === 0) {
+        this.history = messages;
+    }
+  }
+
   needsCompression(): boolean {
     return this.history.length > this.MAX_HISTORY;
   }
 
-  // 🛡️ Extrae los mensajes viejos que deben ser resumidos
   getMessagesToCompress(): Message[] {
     return this.history.slice(0, this.history.length - this.KEEP_RECENT);
   }
 
-  // 🛡️ Aplica el resumen y recorta los mensajes viejos
   applyCompression(newSummary: string) {
     this.rollingSummary = newSummary;
     this.history = this.history.slice(this.history.length - this.KEEP_RECENT);
@@ -38,7 +43,6 @@ export class ConversationManager {
   getHistory(): Message[] {
     const fullHistory: Message[] = [];
     
-    // Si existe un resumen, lo inyectamos asegurando la alternancia de roles para Gemini
     if (this.rollingSummary !== "") {
         fullHistory.push({
             role: 'user',

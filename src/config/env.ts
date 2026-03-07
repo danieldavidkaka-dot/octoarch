@@ -3,39 +3,34 @@ import dotenv from 'dotenv';
 import path from 'path';
 import fs from 'fs';
 
-// 1. Cargar el archivo .env
-// Buscamos el .env en la raíz del proyecto (un nivel arriba de src)
+// 1. Cargar el archivo .env (INTACTO)
 const envPath = path.resolve(__dirname, '../.env');
 
-// Verificación de existencia para depuración (opcional pero útil)
 if (fs.existsSync(envPath)) {
     dotenv.config({ path: envPath });
 } else {
-    // Si no encuentra la ruta específica, intenta la carga por defecto
     dotenv.config(); 
 }
 
 // 2. Definir el ESQUEMA (Las Reglas del Guardia)
 const envSchema = z.object({
-  // CORRECCIÓN PORT: 
-  // 1. Recibimos un string (o undefined).
-  // 2. Si es undefined, ponemos el default como STRING '18789'.
-  // 3. Finalmente, transformamos todo a Number.
   PORT: z.string().default('18789').transform((val) => parseInt(val, 10)),
   
-  // Regla: Debe ser uno de estos 3 valores.
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
   
-  // CORRECCIÓN GEMINI_API_KEY:
-  // Quitamos el objeto de configuración que causaba el error de tipos.
-  // Al poner .min(10), Zod validará que exista y tenga longitud.
   GEMINI_API_KEY: z.string().min(10, "❌ CRÍTICO: La GEMINI_API_KEY falta o es muy corta."),
 
-  // ✈️ NUEVO: Token de Telegram (Opcional, si no está, el bot de Telegram se desactiva)
   TELEGRAM_BOT_TOKEN: z.string().default(''),
   
-  // Rutas (Las construimos dinámicamente, pero las validamos como strings)
-  // Usamos process.cwd() para asegurar que la ruta sea absoluta desde donde ejecutas el comando
+  // 🐘 Credenciales de Supabase (Requeridas)
+  SUPABASE_URL: z.string().url("❌ CRÍTICO: SUPABASE_URL debe ser una URL válida."),
+  SUPABASE_KEY: z.string().min(20, "❌ CRÍTICO: SUPABASE_KEY falta o es muy corta."),
+  
+  // 🛠️ Llaves para el Obrero (Opcionales por ahora)
+  TAVILY_API_KEY: z.string().optional(),      // Herramienta para buscar en Internet
+  OPENWEATHER_API_KEY: z.string().optional(), // Herramienta para ver el clima
+  DEEPSEEK_API_KEY: z.string().optional(),    // 🧠 NUEVO: Herramienta para DeepSeek
+  
   WORKSPACE_DIR: z.string().default(path.resolve(process.cwd(), 'workspace')),
   MEMORY_DIR: z.string().default(path.resolve(process.cwd(), 'memory')),
   LOGS_DIR: z.string().default(path.resolve(process.cwd(), 'logs')),
@@ -47,19 +42,24 @@ const _env = envSchema.safeParse(process.env);
 if (!_env.success) {
   console.error('\n🔥 ERROR CRÍTICO DE CONFIGURACIÓN (Zod):');
   _env.error.issues.forEach((issue) => {
-    // Formateo limpio del error
     const pathString = issue.path.join('.');
     console.error(`   ❌ [${pathString}]: ${issue.message}`);
   });
-  console.error('\n👉 Por favor, crea o revisa tu archivo .env en la raíz del proyecto.');
-  console.error(`👉 Ruta esperada: ${envPath}\n`);
-  process.exit(1); // Matamos la app aquí para no dañar nada
+  console.error('\n👉 Por favor, revisa tu archivo .env en la raíz del proyecto.\n');
+  process.exit(1); 
 }
 
 // 4. Exportar la configuración limpia y tipada
 export const env = {
   ..._env.data,
-  // Añadimos getters extra lógicos
   isDev: _env.data.NODE_ENV === 'development',
   isProd: _env.data.NODE_ENV === 'production',
+  
+  // 💉 El Maletín del Obrero
+  // Agrupamos las llaves aquí para pasárselas fácilmente al sub-agente
+  WORKER_SECRETS: {
+      TAVILY_API_KEY: _env.data.TAVILY_API_KEY,
+      OPENWEATHER_API_KEY: _env.data.OPENWEATHER_API_KEY,
+      DEEPSEEK_API_KEY: _env.data.DEEPSEEK_API_KEY // 🧠 NUEVO: Inyectamos la llave aquí
+  }
 };

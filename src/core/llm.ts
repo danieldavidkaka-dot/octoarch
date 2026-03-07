@@ -65,6 +65,7 @@ export class IntelligenceCore {
     async generateResponse(sessionId: string, userPrompt: string, forcedIntent: string | null = null, imageBase64: string | null = null): Promise<string> {
         try {
             const activeConversation = SessionManager.getInstance().getSession(sessionId);
+            await SessionManager.getInstance().loadHistoryFromCloud(sessionId, activeConversation);
             const memory = await MemorySystem.recall();
             const activeMode = forcedIntent || 'AUTO';
             const isInvoDex = activeMode === 'INVODEX';
@@ -81,6 +82,10 @@ export class IntelligenceCore {
             const contents: any[] = []; 
             if (!isInvoDex) {
                 activeConversation.add('user', userPrompt);
+                
+                // ☁️ NUEVO: Guardar mensaje del usuario en Supabase (Fire & Forget)
+                SessionManager.getInstance().saveMessageToCloud(sessionId, 'user', userPrompt);
+
                 let lastRole = "";
                 for (const msg of activeConversation.getHistory()) {
                     if (!msg.content) continue;
@@ -100,7 +105,12 @@ export class IntelligenceCore {
             const result = await this.generateWithRetry({ contents });
             const finalResponse = await this.processExecution(result, activeMode, contents);
 
-            if (!isInvoDex) activeConversation.add('model', finalResponse);
+            if (!isInvoDex) {
+                activeConversation.add('model', finalResponse);
+                
+                // ☁️ NUEVO: Guardar respuesta de OctoArch en Supabase (Fire & Forget)
+                SessionManager.getInstance().saveMessageToCloud(sessionId, 'assistant', finalResponse);
+            }
             return finalResponse;
 
         } catch (error: any) {
