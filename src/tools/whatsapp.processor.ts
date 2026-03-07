@@ -17,7 +17,12 @@ export class WhatsAppProcessor {
         roleMap: Record<string, string>
     ) {
         // 🔒 Filtros iniciales
+        // 🔒 Filtros iniciales de Seguridad Estricta
         if (msg.isStatus || (msg.type !== 'chat' && msg.type !== 'image')) return;
+        
+        // 🛡️ REGLA DE ORO: Solo escuchar el chat "Tú" (Message Yourself)
+        if (msg.to !== msg.from) return;
+        
         if (!msg.fromMe) return;
         if (!msg.body && !msg.hasMedia) return;
 
@@ -36,9 +41,10 @@ export class WhatsAppProcessor {
                 const { forcedIntent, finalQuery } = await this.parseCommand(bodyStr, roleMap, isCommand, isDirectImage);
                 
                 let query = finalQuery;
-                if (query.trim() === "" && msg.hasMedia) {
-                    query = "Por favor, analiza la imagen adjunta y extrae la información requerida.";
-                }
+if (query.trim() === "" && msg.hasMedia) {
+    // 🧠 Prompt abierto para que Gemini use su criterio visual
+    query = "He recibido esta imagen. ¿Puedes decirme de qué trata o responder de forma natural según su contenido?";
+}
 
                 if (forcedIntent) Logger.info(`🔎 [WhatsApp] Modo activo: ${forcedIntent}`);
                 await msg.react('🧠').catch(() => {});
@@ -105,10 +111,11 @@ export class WhatsAppProcessor {
             }
         }
         // 🖼️ Imagen directa sin comando → INVODEX
-        else if (isDirectImage) {
-            forcedIntent = 'INVODEX';
-            Logger.info(`🔎 [WhatsApp] Imagen directa → Modo: INVODEX`);
-        }
+        // 🖼️ Imagen directa sin comando → Modo AUTO (Criterio de IA)
+else if (isDirectImage) {
+    forcedIntent = 'AUTO';
+    Logger.info(`🔎 [WhatsApp] Imagen directa → Modo: AUTO (Visión General)`);
+}
 
         return { forcedIntent, finalQuery };
     }
