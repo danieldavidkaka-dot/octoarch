@@ -1,66 +1,62 @@
-import { GoogleGenerativeAI, SchemaType } from '@google/generative-ai';
-// Usaremos dotenv directo para no depender de la estructura completa de tu repo principal aún
+import OpenAI from 'openai';
 import * as dotenv from 'dotenv';
 dotenv.config();
 
 export class CoderLLM {
-    private genAI: GoogleGenerativeAI;
-    private model: any;
+    private openai: OpenAI;
 
     constructor() {
-        const apiKey = process.env.GEMINI_API_KEY;
+        const apiKey = process.env.DEEPSEEK_API_KEY;
         if (!apiKey) {
-            console.error("❌ CRÍTICO: Falta GEMINI_API_KEY en el archivo .env de tu nuevo repo.");
+            console.error("❌ CRÍTICO: Falta DEEPSEEK_API_KEY en el archivo .env.");
             process.exit(1);
         }
         
-        this.genAI = new GoogleGenerativeAI(apiKey);
-        
-        // 🛡️ INSTRUCCIÓN DE SISTEMA DRACONIANA (Evolucionada a JSON)
-        this.model = this.genAI.getGenerativeModel({
-            model: "gemini-2.5-flash", 
-            systemInstruction: `Eres un Obrero de Software de nivel Senior. 
-            Tu única misión es escribir código TypeScript perfecto basado en las instrucciones.
-            
-            REGLAS ESTRICTAS DE RESPUESTA:
-            1. Analiza de qué trata el módulo y sugiere un nombre de archivo corto y descriptivo (ej: 'weather_api', 'math_utils'). NO incluyas la extensión '.ts' en el nombre.
-            2. Devuelve el código TypeScript completo sin bloques de Markdown (sin \`\`\`typescript).
-            3. CERO explicaciones o saludos.`,
-            generationConfig: {
-                temperature: 0.0,
-                // Obligamos a la IA a responder con un objeto JSON perfecto
-                responseMimeType: "application/json",
-                responseSchema: {
-                    type: SchemaType.OBJECT,
-                    properties: {
-                        filename: {
-                            type: SchemaType.STRING,
-                            description: "Nombre sugerido para el archivo, en snake_case y sin la extensión .ts"
-                        },
-                        code: {
-                            type: SchemaType.STRING,
-                            description: "El código TypeScript en texto crudo, listo para guardar y compilar"
-                        }
-                    },
-                    required: ["filename", "code"]
-                }
-            }
+        // Conectamos el SDK de OpenAI a los servidores de DeepSeek
+        this.openai = new OpenAI({
+            baseURL: 'https://api.deepseek.com',
+            apiKey: apiKey
         });
     }
 
-    // 🚀 Cambiamos la firma para que devuelva un objeto con ambas cosas
     async generateCode(prompt: string): Promise<{ filename: string, code: string }> {
         try {
-            console.log(`[🧠 Cerebro Obrero]: Procesando prompt...`);
-            const result = await this.model.generateContent(prompt);
+            console.log(`[🧠 Cerebro Obrero]: Consultando a DeepSeek... razonando paso a paso...`);
             
-            // La IA devolverá un JSON string, lo parseamos
-            const responseData = JSON.parse(result.response.text());
+            // Instrucción implacable para domar la salida de DeepSeek
+            const systemInstruction = `Eres un Obrero de Software de nivel Senior. 
+            Tu única misión es escribir código TypeScript perfecto basado en las instrucciones.
+            
+            REGLAS ESTRICTAS DE RESPUESTA:
+            1. Analiza de qué trata el módulo y sugiere un nombre de archivo corto en snake_case (ej: 'weather_api'). NO incluyas la extensión '.ts'.
+            2. Tu respuesta final DEBE ser ÚNICAMENTE un objeto JSON válido con este formato exacto:
+            {
+                "filename": "nombre_sugerido",
+                "code": "el código completo aquí"
+            }
+            3. NO envuelvas el JSON en bloques de código de markdown. CERO explicaciones o saludos. SOLO el JSON puro.`;
+
+            const response = await this.openai.chat.completions.create({
+                model: "deepseek-reasoner", // R1: Piensa antes de escribir
+                messages: [
+                    { role: "system", content: systemInstruction },
+                    { role: "user", content: prompt }
+                ]
+            });
+            
+            // DeepSeek-Reasoner devuelve la respuesta final en 'content'.
+            let responseText = response.choices[0].message.content || "{}";
+            
+            // 🧹 PARCHE DE SEGURIDAD EXTREMA: DeepSeek a veces ignora la regla 3 y pone markdown
+            responseText = responseText.replace(/^```(json)?\n/i, '');
+            responseText = responseText.replace(/```\s*$/i, '');
+            
+            const responseData = JSON.parse(responseText.trim());
             
             let code = responseData.code;
             let filename = responseData.filename;
             
-            // 🧹 PARCHE DE SEGURIDAD (Limpieza de Markdown por si acaso)
+            // Limpiamos el código TypeScript por si lo anidó dentro del JSON
             code = code.replace(/^```(typescript|ts|javascript|js)?\n/i, '');
             code = code.replace(/```\s*$/i, '');
             
@@ -75,7 +71,7 @@ export class CoderLLM {
             };
 
         } catch (error: any) {
-            console.error("[🧠 Cerebro Obrero] Fallo catastrófico en la generación:", error.message);
+            console.error("[🧠 Cerebro Obrero] Fallo catastrófico en la forja con DeepSeek:", error.message);
             throw error;
         }
     }
