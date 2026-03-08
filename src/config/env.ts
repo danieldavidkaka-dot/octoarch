@@ -29,7 +29,6 @@ const envSchema = z.object({
   // 🛠️ Llaves para el Obrero (Opcionales por ahora)
   TAVILY_API_KEY: z.string().optional(),      // Herramienta para buscar en Internet
   OPENWEATHER_API_KEY: z.string().optional(), // Herramienta para ver el clima
-  DEEPSEEK_API_KEY: z.string().optional(),    // 🧠 NUEVO: Herramienta para DeepSeek
   
   WORKSPACE_DIR: z.string().default(path.resolve(process.cwd(), 'workspace')),
   MEMORY_DIR: z.string().default(path.resolve(process.cwd(), 'memory')),
@@ -59,7 +58,6 @@ export const env = {
   // Agrupamos las llaves aquí para pasárselas fácilmente al sub-agente
   WORKER_SECRETS: {
       TAVILY_API_KEY: _env.data.TAVILY_API_KEY,
-      OPENWEATHER_API_KEY: _env.data.OPENWEATHER_API_KEY,
-      DEEPSEEK_API_KEY: _env.data.DEEPSEEK_API_KEY // 🧠 NUEVO: Inyectamos la llave aquí
+      OPENWEATHER_API_KEY: _env.data.OPENWEATHER_API_KEY
   }
 };

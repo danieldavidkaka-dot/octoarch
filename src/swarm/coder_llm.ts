@@ -1,66 +1,65 @@
-import OpenAI from 'openai';
+import { GoogleGenerativeAI } from '@google/generative-ai';
 import * as dotenv from 'dotenv';
 dotenv.config();
 
 export class CoderLLM {
-    private openai: OpenAI;
+    private genAI: GoogleGenerativeAI;
 
     constructor() {
-        const apiKey = process.env.DEEPSEEK_API_KEY;
+        const apiKey = process.env.GEMINI_API_KEY; 
         if (!apiKey) {
-            console.error("❌ CRÍTICO: Falta DEEPSEEK_API_KEY en el archivo .env.");
+            console.error("❌ CRÍTICO: Falta GEMINI_API_KEY en el archivo .env.");
             process.exit(1);
         }
         
-        // Conectamos el SDK de OpenAI a los servidores de DeepSeek
-        this.openai = new OpenAI({
-            baseURL: 'https://api.deepseek.com',
-            apiKey: apiKey
-        });
+        this.genAI = new GoogleGenerativeAI(apiKey);
     }
 
     async generateCode(prompt: string): Promise<{ filename: string, code: string }> {
         try {
-            console.log(`[🧠 Cerebro Obrero]: Consultando a DeepSeek... razonando paso a paso...`);
+            // 🏷️ LOG: Así sabremos que el nuevo formato irrompible está activo
+            console.log(`[🧠 Cerebro Obrero]: Consultando a Gemini (Motor 2.5 Flash - Modo Etiquetas activo)...`);
             
-            // Instrucción implacable para domar la salida de DeepSeek
+            // 🚨 EL CAMBIO MAESTRO: Adiós JSON
             const systemInstruction = `Eres un Obrero de Software de nivel Senior. 
             Tu única misión es escribir código TypeScript perfecto basado en las instrucciones.
             
             REGLAS ESTRICTAS DE RESPUESTA:
-            1. Analiza de qué trata el módulo y sugiere un nombre de archivo corto en snake_case (ej: 'weather_api'). NO incluyas la extensión '.ts'.
-            2. Tu respuesta final DEBE ser ÚNICAMENTE un objeto JSON válido con este formato exacto:
-            {
-                "filename": "nombre_sugerido",
-                "code": "el código completo aquí"
-            }
-            3. NO envuelvas el JSON en bloques de código de markdown. CERO explicaciones o saludos. SOLO el JSON puro.`;
+            1. NO devuelvas JSON. El formato JSON se rompe con el código complejo.
+            2. Sugiere un nombre de archivo corto en snake_case (ej: 'logger_analyzer').
+            3. Tu respuesta final DEBE usar exactamente estas dos etiquetas para separar la información:
 
-            const response = await this.openai.chat.completions.create({
-                model: "deepseek-reasoner", // R1: Piensa antes de escribir
-                messages: [
-                    { role: "system", content: systemInstruction },
-                    { role: "user", content: prompt }
-                ]
+            <filename>nombre_sugerido.ts</filename>
+            <code>
+            // Escribe todo el código TypeScript aquí
+            </code>
+
+            No agregues texto fuera de estas etiquetas.`;
+
+            const model = this.genAI.getGenerativeModel({ 
+                model: "gemini-2.5-flash", 
+                systemInstruction: systemInstruction 
             });
+
+            const result = await model.generateContent(prompt);
+            const responseText = result.response.text() || "";
             
-            // DeepSeek-Reasoner devuelve la respuesta final en 'content'.
-            let responseText = response.choices[0].message.content || "{}";
+            // 🕵️‍♂️ Extracción con Regex (Inmune a problemas de formato/comillas/saltos de línea)
+            const filenameMatch = responseText.match(/<filename>([\s\S]*?)<\/filename>/i);
+            const codeMatch = responseText.match(/<code>([\s\S]*?)<\/code>/i);
+
+            if (!filenameMatch || !codeMatch) {
+                // Si por alguna razón rarísima la IA no usa las etiquetas
+                throw new Error("El Obrero no respetó el formato de etiquetas <filename> y <code>.");
+            }
             
-            // 🧹 PARCHE DE SEGURIDAD EXTREMA: DeepSeek a veces ignora la regla 3 y pone markdown
-            responseText = responseText.replace(/^```(json)?\n/i, '');
-            responseText = responseText.replace(/```\s*$/i, '');
+            let filename = filenameMatch[1].trim();
+            let code = codeMatch[1].trim();
             
-            const responseData = JSON.parse(responseText.trim());
-            
-            let code = responseData.code;
-            let filename = responseData.filename;
-            
-            // Limpiamos el código TypeScript por si lo anidó dentro del JSON
+            // Limpiamos los backticks de markdown por si la IA los pone dentro del bloque <code>
             code = code.replace(/^```(typescript|ts|javascript|js)?\n/i, '');
             code = code.replace(/```\s*$/i, '');
             
-            // Nos aseguramos de que termine en .ts
             if (!filename.endsWith('.ts')) {
                 filename += '.ts';
             }
@@ -71,7 +70,7 @@ export class CoderLLM {
             };
 
         } catch (error: any) {
-            console.error("[🧠 Cerebro Obrero] Fallo catastrófico en la forja con DeepSeek:", error.message);
+            console.error("[🧠 Cerebro Obrero] Fallo catastrófico en la forja:", error.message);
             throw error;
         }
     }

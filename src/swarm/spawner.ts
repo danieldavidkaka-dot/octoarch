@@ -17,11 +17,12 @@ export class Spawner {
             });
 
             // 🛡️ CORTAFUEGOS ANTI-ZOMBIS: Temporizador de autodestrucción (60 segundos)
+            // 🛡️ CORTAFUEGOS ANTI-ZOMBIS: Temporizador de autodestrucción (3 minutos)
             const timeoutId = setTimeout(() => {
-                Logger.warn(`[👑 ORQUESTADOR]: 🚨 ALERTA CRÍTICA - El Obrero se ha colgado. Procediendo a aniquilar el proceso (Timeout).`);
+                Logger.warn(`[👑 ORQUESTADOR]: 🚨 ALERTA CRÍTICA - El Obrero se ha colgado. Procediendo a aniquilar el proceso (Timeout de 3 min).`);
                 worker.kill('SIGKILL'); // Asesina implacablemente el proceso colgado a nivel de OS
-                resolve(`❌ [TIMEOUT] El Obrero fue asesinado porque tardó más de 60 segundos en responder. Es muy probable que el código que intentó compilar contuviera un bucle infinito (while loop) o una promesa que nunca se resolvió. Pídele que lo reescriba con más cuidado.`);
-            }, 60000); // 60,000 milisegundos = 60 segundos
+                resolve(`❌ [TIMEOUT] El Obrero fue asesinado porque tardó más de 3 minutos en responder. Esto puede deberse a congestión extrema en la API del LLM o a un bucle infinito en el código compilado.`);
+            }, 180000); // 180,000 milisegundos = 3 minutos
 
             // Le pasamos la tarea dinámica que OctoArch nos pidió
             worker.send({ tarea: taskDescription });

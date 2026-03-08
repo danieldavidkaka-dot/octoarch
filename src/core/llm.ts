@@ -27,7 +27,7 @@ export class IntelligenceCore {
 
     private async getModel() {
         const now = Date.now();
-        if (this.cachedModel && (now - this.lastModelUpdate < 5 * 60 * 1000)) return this.cachedModel; 
+        if (this.cachedModel && (now - this.lastModelUpdate < 5 * 60 * 1000)) return this.cachedModel;
 
         const mcpTools = await MCPManager.getInstance().getDynamicGeminiTools();
         const allTools = [...octoTools, ...mcpTools];
@@ -51,7 +51,7 @@ export class IntelligenceCore {
         let delay = 5000;
         const model = await this.getModel();
         for (let i = 0; i < retries; i++) {
-            try { return await model.generateContent(request); } 
+            try { return await model.generateContent(request); }
             catch (error: any) {
                 if (error.message?.includes('429') || error.message?.includes('503')) {
                     await new Promise(resolve => setTimeout(resolve, delay));
@@ -79,7 +79,7 @@ export class IntelligenceCore {
                 } catch { activeConversation.applyCompression("Contexto omitido."); }
             }
             
-            const contents: any[] = []; 
+            const contents: any[] = [];
             if (!isInvoDex) {
                 activeConversation.add('user', userPrompt);
                 
@@ -133,6 +133,6 @@ export class IntelligenceCore {
         }
         return `**Octoarch:** Intenté ejecutar herramientas pero fallaron.\n\n${orchestratorResult.toolOutputs}`;
     }
-} 
+}
 
 export function getBrain(): IntelligenceCore { return IntelligenceCore.getInstance(); }
