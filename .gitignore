@@ -15,4 +15,9 @@ workspace/
 # 📦 Ignorar el frontend para mantener el repositorio del backend liviano
 frontend/
 
+# Ignorar el dynamic_tools
+dynamic_tools/
+
+
+
 

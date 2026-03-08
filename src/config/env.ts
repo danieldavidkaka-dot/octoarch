@@ -35,7 +35,7 @@ const envSchema = z.object({
   LOGS_DIR: z.string().default(path.resolve(process.cwd(), 'logs')),
 });
 
-// 3. Validar
+// 3. Validar (¡Restaurado!)
 const _env = envSchema.safeParse(process.env);
 
 if (!_env.success) {
@@ -48,16 +48,22 @@ if (!_env.success) {
   process.exit(1); 
 }
 
+// Extraemos la data de forma segura (el "!" calma a TypeScript)
+const envData = _env.data!;
+
 // 4. Exportar la configuración limpia y tipada
 export const env = {
-  ..._env.data,
-  isDev: _env.data.NODE_ENV === 'development',
-  isProd: _env.data.NODE_ENV === 'production',
+  ...envData,
+  isDev: envData.NODE_ENV === 'development',
+  isProd: envData.NODE_ENV === 'production',
   
   // 💉 El Maletín del Obrero
   // Agrupamos las llaves aquí para pasárselas fácilmente al sub-agente
   WORKER_SECRETS: {
-      TAVILY_API_KEY: _env.data.TAVILY_API_KEY,
-      OPENWEATHER_API_KEY: _env.data.OPENWEATHER_API_KEY
+      TAVILY_API_KEY: envData.TAVILY_API_KEY,
+      OPENWEATHER_API_KEY: envData.OPENWEATHER_API_KEY,
+      // Le pasamos las llaves de Supabase a las herramientas dinámicas:
+      SUPABASE_URL: envData.SUPABASE_URL,
+      SUPABASE_ANON_KEY: envData.SUPABASE_KEY // Mapeamos el nombre para que la herramienta lo reconozca
   }
 };
