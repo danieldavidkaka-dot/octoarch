@@ -1,18 +1,3 @@
-# 🐙 OctoArch - The Cognitive Runtime
-
-[![AI for Good](https://img.shields.io/badge/AI-Make_the_world_a_better_place-success)](#) [![Free Venezuela](https://img.shields.io/badge/Free-Venezuela_🇻🇪_|_Free_the_world_❤️-ff0000)](#)
-
-![OctoArch](assets/wmremove-transformed.png)
-
-¡Es el momento perfecto para actualizar la documentación, Arquitecto! 📝🔥 Con la integración del estándar AIEOS y la Arquitectura Zero-Trust, tu sistema acaba de dar un salto generacional.
-
-He actualizado tu README.md (manteniendo su formato profesional en inglés) para incluir el nuevo "ADN Digital", el control dinámico de temperatura y las nuevas identidades que acabamos de forjar, además de actualizar el árbol de carpetas.
-
-Copia y pega este código en tu archivo README.md:
-
-Markdown
-# 🐙 OctoArch - The Cognitive Runtime
-
 [![AI for Good](https://img.shields.io/badge/AI-Make_the_world_a_better_place-success)](#) [![Free Venezuela](https://img.shields.io/badge/Free-Venezuela_🇻🇪_|_Free_the_world_❤️-ff0000)](#)
 
 ![OctoArch](assets/wmremove-transformed.png)
