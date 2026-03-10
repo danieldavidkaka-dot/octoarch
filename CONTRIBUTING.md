@@ -36,11 +36,14 @@ We have moved away from static temperatures in the core runtime. Ensure that whe
 Ensure strict isolation using `client_id` and `session_id` in Supabase to prevent data bleed. When contributing to the `DynamicRegistry`, ensure `delete require.cache` is used properly to prevent memory leaks during hot-reloads.
 
 ## 🚀 Pull Request (PR) Process
-1.  Fork the repository.
-2.  Create your feature branch (`git checkout -b feature/MyNewTool`).
-3.  Commit your changes with descriptive messages.
-4.  **Security Check:** Ensure your changes don't break the Path Jailing, PBAC AIEOS filters, or the Iteration Limiters.
-5.  Push to the branch (`git push origin feature/MyNewTool`).
-6.  Open a Pull Request detailing the problem solved and the security tests performed.
+1. Fork the repository.
+2. Create your feature branch (`git checkout -b feature/MyNewTool`).
+3. Commit your changes with descriptive messages.
+4. **Security Check:** Ensure your changes don't break the Path Jailing, PBAC AIEOS filters, or the Iteration Limiters.
+5. Push to the branch (`git push origin feature/MyNewTool`).
+6. Open a Pull Request detailing the problem solved and the security tests performed.
+
+## ⚖️ License Notice
+By contributing to OctoArch, you agree that your contributions will be licensed under its **Apache 2.0 License**.
 
 Happy coding, let's build the future of autonomous systems together! 🐙

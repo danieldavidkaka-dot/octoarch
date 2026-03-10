@@ -76,3 +76,5 @@ octoarch_core/
 │   │   └── shell.ts             # 💻 Command execution (RBAC Protected)
 
 OctoArch - Forging the future of autonomous systems, one iteration at a time.
+## ⚖️ License
+This project is licensed under the **Apache License 2.0**. See the [LICENSE](LICENSE) file for details.
