@@ -4,7 +4,8 @@ import path from 'path';
 import { Logger } from '../utils/logger';
 
 export class Spawner {
-    static async invokeWorker(taskDescription: string): Promise<string> {
+    // 🛠️ FIX: Agregamos el segundo parámetro maxIterations que nos manda forge_tool.ts
+    static async invokeWorker(taskDescription: string, maxIterations: number): Promise<string> {
         return new Promise((resolve, reject) => {
             Logger.info(`[👑 ORQUESTADOR]: Necesito crear un módulo nuevo.`);
             Logger.info(`[👑 ORQUESTADOR]: Misión: "${taskDescription}"`);
@@ -16,7 +17,6 @@ export class Spawner {
                 execArgv: ['-r', 'ts-node/register'] 
             });
 
-            // 🛡️ CORTAFUEGOS ANTI-ZOMBIS: Temporizador de autodestrucción (60 segundos)
             // 🛡️ CORTAFUEGOS ANTI-ZOMBIS: Temporizador de autodestrucción (3 minutos)
             const timeoutId = setTimeout(() => {
                 Logger.warn(`[👑 ORQUESTADOR]: 🚨 ALERTA CRÍTICA - El Obrero se ha colgado. Procediendo a aniquilar el proceso (Timeout de 3 min).`);
@@ -24,8 +24,11 @@ export class Spawner {
                 resolve(`❌ [TIMEOUT] El Obrero fue asesinado porque tardó más de 3 minutos en responder. Esto puede deberse a congestión extrema en la API del LLM o a un bucle infinito en el código compilado.`);
             }, 180000); // 180,000 milisegundos = 3 minutos
 
-            // Le pasamos la tarea dinámica que OctoArch nos pidió
-            worker.send({ tarea: taskDescription });
+            // ⛓️ LÓGICA DE LA CORREA: Le pasamos la tarea Y el límite de intentos al Obrero
+            worker.send({ 
+                tarea: taskDescription,
+                maxIterations: maxIterations 
+            });
 
             worker.on('message', (respuesta: any) => {
                 clearTimeout(timeoutId); // 🧹 Si responde a tiempo, cancelamos la autodestrucción

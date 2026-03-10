@@ -18,7 +18,7 @@ export class CoderLLM {
     async generateCode(prompt: string): Promise<{ filename: string, code: string }> {
         try {
             // 🏷️ LOG: Así sabremos que el nuevo formato irrompible está activo
-            console.log(`[🧠 Cerebro Obrero]: Consultando a Gemini (Motor 2.5 Flash - Modo Etiquetas activo)...`);
+            console.log(`[🧠 Cerebro Obrero]: Consultando a Gemini (Motor 3.0 Flash - Modo Etiquetas activo)...`);
             
             // 🚨 EL CAMBIO MAESTRO: Adiós JSON
             const systemInstruction = `Eres un Obrero de Software de nivel Senior. 
@@ -37,7 +37,7 @@ export class CoderLLM {
             No agregues texto fuera de estas etiquetas.`;
 
             const model = this.genAI.getGenerativeModel({ 
-                model: "gemini-2.5-flash", 
+                model: "gemini-3.1-pro-preview", 
                 systemInstruction: systemInstruction 
             });
 

@@ -16,7 +16,7 @@ export class FileTool {
         await fs.mkdir(path.join(PATHS.WORKSPACE, 'temp'), { recursive: true });
     }
 
-    // 🛡️ Validador de Seguridad (Parcheado para Windows Path Traversal)
+    // 🛡️ Validador de Seguridad (Parcheado para Windows Path Traversal y Falsos Positivos)
     private static validatePath(requestedPath: string): string {
         const workspacePath = path.resolve(PATHS.WORKSPACE);
         const fullPath = path.resolve(workspacePath, requestedPath);
@@ -31,8 +31,13 @@ export class FileTool {
             throw new Error(`🚫 SEGURIDAD CRÍTICA: Intento de escape del workspace bloqueado: ${requestedPath}`);
         }
 
+        // 🛠️ FIX: Búsqueda exacta de segmentos para evitar que 'dist' bloquee 'distance.txt'
+        const pathSegments = fullPath.split(path.sep);
+        const fileName = path.basename(fullPath);
+
         for (const pattern of this.DENIED_PATTERNS) {
-            if (fullPath.includes(pattern)) {
+            // Si el patrón es un directorio exacto en la ruta, o si el archivo coincide exactamente
+            if (pathSegments.includes(pattern) || fileName === pattern || (pattern.startsWith('.') && fileName.startsWith(pattern))) {
                 throw new Error(`🚫 SEGURIDAD: Acceso denegado a patrón restringido: ${pattern}`);
             }
         }
@@ -81,7 +86,12 @@ export class FileTool {
             const entries = await fs.readdir(safePath, { withFileTypes: true });
 
             const cleanList = entries
-                .filter(e => !this.DENIED_PATTERNS.some(p => e.name.includes(p)))
+                .filter(e => {
+                    // 🛠️ FIX: Evitar que carpetas/archivos válidos se oculten por falsos positivos
+                    return !this.DENIED_PATTERNS.some(pattern => 
+                        e.name === pattern || (pattern.startsWith('.') && e.name.startsWith(pattern))
+                    );
+                })
                 .map(e => {
                     const type = e.isDirectory() ? 'DIR ' : 'FILE';
                     return `[${type}] ${e.name}`;

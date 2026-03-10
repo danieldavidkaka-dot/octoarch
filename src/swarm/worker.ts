@@ -11,7 +11,9 @@ const cerebro = new CoderLLM();
 process.on('message', async (mensaje: any) => {
     console.log(`[👷 OBRERO]: He despertado. Orden recibida: "${mensaje.tarea}"`);
 
-    const maxIntentos = 3;
+    // ⛓️ LA CORREA: Tomamos el límite matemático enviado por el Orquestador (octo sw)
+    // 🛠️ FIX: Si no lo envía (por error o por flujo normal), usamos 3 por defecto por seguridad y flexibilidad.
+    const maxIntentos = mensaje.maxIterations || 3;
     let intentoActual = 1;
     
     // 🧠 INYECCIÓN DE LLAVES
@@ -110,7 +112,7 @@ process.on('message', async (mensaje: any) => {
                 promptTecnico += `\n\n⚠️ ATENCIÓN: El código falló con este error de TypeScript:\n${tsErrorDetails}\n\nPor favor, devuelve el CÓDIGO CORREGIDO completo.`;
                 intentoActual++;
             } else {
-                console.log(`[👷 OBRERO]: 💀 Agoté mis ${maxIntentos} intentos. Abortando misión.`);
+                console.log(`[👷 OBRERO]: 💀 Agoté mis ${maxIntentos} intento(s). Abortando misión.`);
                 if (process.send) {
                     process.send({ estado: 'ERROR', error: tsErrorDetails }, undefined, undefined, () => {
                         process.disconnect(); process.exit(1);

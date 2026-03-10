@@ -7,13 +7,14 @@ import { MCPManager } from './mcp_manager';
 import { ToolOrchestrator } from './tool_orchestrator';
 import { PromptManager } from './prompt_manager';
 import { DynamicRegistry } from '../dynamic_registry';
-import { SessionManager } from './session_manager'; // 🚀 Lógica extraída aquí
+import { SessionManager } from './session_manager'; 
 
 export class IntelligenceCore {
     private static instance: IntelligenceCore | null = null;
     private genAI: GoogleGenerativeAI;
     private cachedModel: any = null;
     private lastModelUpdate: number = 0;
+    private currentRole: string = 'octo_base'; // 🧬 NUEVO: Guardamos qué ADN está activo
 
     private constructor() {
         this.genAI = new GoogleGenerativeAI(env.GEMINI_API_KEY);
@@ -25,8 +26,20 @@ export class IntelligenceCore {
         return this.instance;
     }
 
+    // 🧬 NUEVO: Método para cambiar el ADN (Role-Switching) en tiempo de ejecución
+    public setRole(roleId: string) {
+        if (this.currentRole !== roleId) {
+            this.currentRole = roleId;
+            // Forzamos a que el modelo se recargue en la próxima llamada para leer el nuevo ADN
+            this.lastModelUpdate = 0; 
+            Logger.info(`🧬 [AIEOS] ADN cambiado a: ${roleId}. El núcleo se recargará.`);
+        }
+    }
+
+    // 🧬 REFACTOR: Ahora el modelo se forja basado en el ADN actual
     private async getModel() {
         const now = Date.now();
+        // Solo usamos caché si el modelo no es muy viejo y no cambiamos de rol
         if (this.cachedModel && (now - this.lastModelUpdate < 5 * 60 * 1000)) return this.cachedModel;
 
         const mcpTools = await MCPManager.getInstance().getDynamicGeminiTools();
@@ -36,11 +49,21 @@ export class IntelligenceCore {
         const dynamicSchemas = DynamicRegistry.getSchemas();
         if (dynamicSchemas.length > 0) allTools.push({ functionDeclarations: dynamicSchemas });
 
+        // 🧬 LECTURA DEL ADN (AIEOS)
+        const systemInstructionText = await PromptManager.getSystemPrompt(this.currentRole);
+        const dynamicTemperature = await PromptManager.getLlmTemperature(this.currentRole);
+
+        Logger.info(`⚙️ [AIEOS] Inyectando núcleo con Temperatura: ${dynamicTemperature}`);
+
         this.cachedModel = this.genAI.getGenerativeModel({
-            model: "gemini-2.5-flash",
+            model: "gemini-3-flash-preview",
             tools: allTools,
-            systemInstruction: PromptManager.getSystemInstruction(),
-            generationConfig: { temperature: 0.1, topK: 32, topP: 0.8 }
+            systemInstruction: systemInstructionText, // 🧬 ADN Inyectado
+            generationConfig: { 
+                temperature: dynamicTemperature, // 🧬 Temperatura Matemática Inyectada
+                topK: 32, 
+                topP: 0.8 
+            }
         });
         
         this.lastModelUpdate = now;
@@ -67,7 +90,7 @@ export class IntelligenceCore {
             const activeConversation = SessionManager.getInstance().getSession(sessionId);
             await SessionManager.getInstance().loadHistoryFromCloud(sessionId, activeConversation);
             const memory = await MemorySystem.recall();
-            const activeMode = forcedIntent || 'AUTO';
+            const activeMode = forcedIntent || 'chat';
             const isInvoDex = activeMode === 'INVODEX';
 
             // Compresión de contexto delegada
@@ -95,6 +118,8 @@ export class IntelligenceCore {
                 }
             }
 
+            // Mantenemos tu lógica de "Turn Prompt" para meter memoria dinámica
+            // pero el PromptManager ahora espera que uses la función buildTurnPrompt tal como la tenías
             const currentTurnText = PromptManager.buildTurnPrompt(activeMode, memory, userPrompt, !!imageBase64);
             const currentParts: any[] = [{ text: currentTurnText }];
             if (imageBase64) currentParts.push({ inlineData: { data: imageBase64.split(',')[1], mimeType: imageBase64.split(':')[1].split(';')[0] } });

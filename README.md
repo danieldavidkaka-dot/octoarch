@@ -4,81 +4,90 @@
 
 ![OctoArch](assets/wmremove-transformed.png)
 
+¡Es el momento perfecto para actualizar la documentación, Arquitecto! 📝🔥 Con la integración del estándar AIEOS y la Arquitectura Zero-Trust, tu sistema acaba de dar un salto generacional.
+
+He actualizado tu README.md (manteniendo su formato profesional en inglés) para incluir el nuevo "ADN Digital", el control dinámico de temperatura y las nuevas identidades que acabamos de forjar, además de actualizar el árbol de carpetas.
+
+Copia y pega este código en tu archivo README.md:
+
+Markdown
+# 🐙 OctoArch - The Cognitive Runtime
+
+[![AI for Good](https://img.shields.io/badge/AI-Make_the_world_a_better_place-success)](#) [![Free Venezuela](https://img.shields.io/badge/Free-Venezuela_🇻🇪_|_Free_the_world_❤️-ff0000)](#)
+
+![OctoArch](assets/wmremove-transformed.png)
+
 OctoArch is not a simple transactional bot. It is an advanced Cognitive Runtime and Autonomous Agent, allowing you to execute complex workflows, manage servers (via MCP), process documents via WhatsApp/Telegram, and autonomously monitor corporate inboxes (Gmail).
 
-With version 5.0, the system has reached a new paradigm: Swarm Intelligence, Single-Core Orchestration, and Infinite Stateful Memory. OctoArch can now write, debug, and dynamically inject its own TypeScript code into its neural network at runtime, achieving true self-evolution without human intervention or server restarts.
+With version 5.0, the system has reached a new paradigm: **AIEOS (AI Entity Object Specification)**, Swarm Intelligence, Single-Core Orchestration, and Zero-Trust Autonomy. OctoArch can now write, debug, and dynamically inject its own TypeScript code into its neural network at runtime, while morphing its personality based on mathematical DNA files under a strict "Titanium Cage" security model.
 
 ## ✨ Key Features
 
-* **🧠 Infinite Cognitive Memory (Supabase):** The era of bot amnesia is over. Each interaction maintains an isolated, multi-tenant session backed by a PostgreSQL cloud database (Supabase). The system safely isolates client data (`client_id` and `session_id`) and seamlessly restores context after server reboots.
-* **🌐 Unified Cognitive Core (Gemini AI):** OctoArch relies on a pure, highly optimized Google Gemini backend for both high-level conversational orchestration (Virtual CEO) and complex logic/code generation (Swarm Worker). This single-core architecture ensures zero-latency handoffs, consistent token management, and bulletproof stability.
-* **🤖 Swarm Intelligence & Autonomous Tool Forging:** When the AI needs a tool it doesn't possess, it spawns a specialized Sub-Agent (Worker). This Worker writes the required TypeScript module in an isolated sandbox (`src/temp_tools`), safely consumes API keys via an injected secrets briefcase (`WORKER_SECRETS`), runs a linter (`tsc`), auto-corrects syntax errors, and promotes the code to production (`src/dynamic_tools`).
-* **📧 Autonomous Inbox Processing:** An integrated CronJob monitors authorized Gmail accounts every 15 minutes. It auto-detects unread invoices/documents, validates their bytes, and securely downloads them to the workspace without human intervention.
-* **📸 InvoDex Zero-Friction Flow:** Send a photo of an invoice via WhatsApp. The system auto-detects the intent (INVODEX), extracts tax fields via visual AI, generates a deterministic JSON, and injects it into the ERP via MCP.
-* **🎮 Dynamic Skills System:** Teach OctoArch new abilities on the fly. By placing Markdown (`.md`) manuals in `workspace/skills/`, the AI can load and apply new contextual logic (e.g., UI/UX design rules, specific coding standards).
-* **🔀 Virtual C-Suite & Role Routing:** Use prefixes like `octo cfo`, `octo cmo`, or `octo dev` to force the AI to adopt specific executive profiles with pre-assigned RBAC (Role-Based Access Control) permissions.
-* **🛡️ Military-Grade Security:** The system NEVER trusts reported mimetypes. It uses a centralized FileValidator for "Magic Numbers" byte-level analysis. Furthermore, Sub-Agents are strictly prohibited from hardcoding secrets, relying entirely on a Zod-validated environment schema.
+🧬 **AIEOS Digital DNA & Dynamic Temperature:** The system abandons text-based prompt roles. Personas are now defined via strict JSON contracts (`logic_weight`, `creativity_weight`, `risk_tolerance`). The Core reads this DNA and physically alters the Gemini API's Temperature and forbidden vocabulary in real-time, switching from a creative Growth Hacker (Temp: 0.85) to a robotic OCR processor (Temp: 0.00) in milliseconds.
+
+🛡️ **Zero-Trust Architecture (Default Sandbox):** "God Mode" by default is dead. If no specific role is invoked, the system forcibly defaults to the `CHAT` concierge persona with restricted `sandbox` access, ensuring maximum security against prompt injections or accidental destructive commands.
+
+🧠 **Infinite Cognitive Memory (Supabase):** Interaction-isolated, multi-tenant session backed by PostgreSQL. Restores context seamlessly after reboots.
+
+🌐 **Unified Cognitive Core (Gemini 3.0):** Powered by the latest Gemini Flash engine. A single-core architecture for both the Virtual CEO and the specialized Swarm Workers, ensuring zero-latency handoffs.
+
+⛓️ **Titanium Cage Security (Path Jailing & PBAC):** The system implements Policy-Based Access Control via AIEOS capabilities and a mathematical path validator. Any attempt by the AI to perform a Path Traversal attack (`../`) or access files outside the authorized workspace results in an immediate security block.
+
+🤖 **Swarm Intelligence & Autonomous Tool Forging:** Spawns a Sub-Agent (Worker) in an isolated sandbox (`src/temp_tools`), consumes secrets via `WORKER_SECRETS`, runs `tsc` for validation, and promotes code to `src/dynamic_tools` via Hot-Swap.
+
+📸 **InvoDex Zero-Friction Flow:** Visual AI extraction for invoices sent via WhatsApp/Telegram with deterministic JSON injection into ERPs via MCP.
 
 ## 🚀 Initialization and Usage
-
-The omnichannel services (WhatsApp, Telegram, HTTP/WS API, and CronJobs) are deeply integrated into the OctoArch lifecycle.
-
-**Start the Main Server:**
-From the root of the project, run:
-
+Start the Main Server:
 ```bash
 npm run start
 
-(Use npm run dev only if you are manually coding the core, to enable Nodemon).
-
 Connect your Channels:
 
-WhatsApp: A QR code will appear in your terminal. Scan it to link the agent to your phone.
+WhatsApp: Scan the QR code in the terminal.
 
-Telegram: The bot token from your .env connects instantly via Polling.
+Telegram: Token connects instantly via Polling.
 
-Gmail (First time only): The system uses a persistent OAuth2 refresh token stored in workspace/token.json.
+Gmail: OAuth2 persistent token managed in workspace/token.json.
 
-Frontend: A static web server automatically boots up serving the frontend/ directory with live WebSocket updates.
+💬 Commands and Personas (AIEOS DNA)
+!ping: Returns server, vision, and sandbox status.
 
-💬 Commands and Syntax (Omnichannel Module)
-The agent automatically reacts to messages sent to its chat.
+octo sw [task]: Swarm Mode - Activates the CoderLLM Worker (High Autonomy, 5 Iterations) to forge new tools.
 
-Zero-Friction Mode (InvoDex): Send an image directly. The system automatically parses the invoice.
+octo chat [task]: Safe Mode - (Default) Concierge/Assistant. Friendly, high creativity, restricted to basic tools.
 
-Diagnostic: !ping -> Returns the server and vision status.
+octo dev [task]: Software Engineer - Architecture & coding mode. Admin access, strict TypeScript, logic-driven.
 
-C-Suite Commands:
+octo cfo [task]: Chief Financial Officer - Mathematical analyst. Zero risk tolerance, strict PBAC compliance.
 
-octo cfo analyze this budget -> Chief Financial Officer Mode (Strict, analytical, terminal tools blocked).
+octo cmo [task]: Chief Marketing Officer - Growth Hacker. High creativity, ROI-focused, persuasive copywriter.
 
-octo cmo review this campaign -> Chief Marketing Officer Mode (Creative, persuasive).
+octo research [task]: OSINT Investigator - Zero hallucinations. Strict fact-checking, neutral academic tone.
 
-octo dev check the src folder -> Developer Mode (Access to terminal, shell commands, local files, and Skills).
+octo invodex [task]: Fiscal Extractor - Robotic OCR engine. 0.0 Temperature, strict JSON output, validation algorithms.
 
-octo research latest AI news -> Researcher Mode (Access to web inspection and synthesis).
-
-octo chat What can you do? -> Safe Conversational Mode (All system-modifying tools blocked).
-
-📂 Module Architecture
-The service relies on a Clean Architecture pattern, strictly separating the AI logic from tool execution:
+📂 Module Architecture (Clean Architecture)
 
 octoarch_core/
 ├── src/
-│   ├── config/              # Environment variables, Zod schemas, and WORKER_SECRETS
+│   ├── config/          # Zod schemas, env validation, and WORKER_SECRETS
 │   ├── core/
-│   │   ├── llm.ts               # 🧠 Cognitive CEO brain (Slim Architecture)
-│   │   ├── tool_orchestrator.ts # 🛠️ Execution delegator (Native, MCP, Dynamic)
-│   │   ├── dynamic_registry.ts  # 🔌 Hot-Swap tool loader (require.cache cleaner)
-│   │   └── session_manager.ts   # 🐘 Supabase cloud memory synchronization
-│   ├── swarm/               # 🧬 Sub-Agent Auto-Programming System
-│   │   ├── worker.ts            # Autonomous coding logic & self-correction
-│   │   └── coder_llm.ts         # High-precision strict coding LLM interface (XML Tagged)
-│   ├── temp_tools/          # 🛡️ Safe sandbox for Worker compilation
-│   ├── dynamic_tools/       # 🚀 Auto-generated TypeScript tools promoted to production
+│   │   ├── llm.ts               # 🧠 Cognitive CEO (Slim Architecture + Hot-Swap)
+│   │   ├── prompt_manager.ts    # 🧬 AIEOS DNA Injector & Temperature Controller
+│   │   ├── tool_orchestrator.ts # 🛠️ Execution delegator (RBAC Filter)
+│   │   └── session_manager.ts   # 🐘 Cloud memory synchronization
+│   ├── identity/        # 🧬 AIEOS Digital DNA Vault
+│   │   └── vault/       # JSON Persona contracts (cfo, dev, cmo, etc.)
+│   ├── types/           # 📜 Core TypeScript Interfaces (IAieosIdentity)
+│   ├── swarm/           # 🧬 Sub-Agent Auto-Programming System
+│   │   ├── spawner.ts           # 🏗️ Process forking & SIGKILL safety
+│   │   ├── worker.ts            # 👷 Autonomous logic & iteration control
+│   │   └── coder_llm.ts         # High-precision XML Tagged interface
+│   ├── temp_tools/      # 🛡️ Safe sandbox for Worker compilation
+│   ├── dynamic_tools/   # 🚀 Auto-generated tools (Production)
 │   ├── tools/
-│   │   ├── whatsapp.ts          # 📱 WA Engine & Router
-│   │   ├── telegram.ts          # ✈️ Telegram Engine
-│   │   ├── gmail.ts             # 📧 OAuth2 Mail Reader & Downloader
-│   │   ├── browser.ts           # 🥷 Stealth Puppeteer Scraper
-│   │   └── skill_
+│   │   ├── files.ts             # 📂 Secure File System (Path Jailing)
+│   │   └── shell.ts             # 💻 Command execution (RBAC Protected)
+
+OctoArch - Forging the future of autonomous systems, one iteration at a time.
