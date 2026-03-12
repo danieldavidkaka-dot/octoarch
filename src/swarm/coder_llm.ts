@@ -37,7 +37,7 @@ export class CoderLLM {
             No agregues texto fuera de estas etiquetas.`;
 
             const model = this.genAI.getGenerativeModel({ 
-                model: "gemini-3.1-pro-preview", 
+                model: "gemini-3-flash-preview", 
                 systemInstruction: systemInstruction 
             });
 
